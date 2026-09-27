@@ -1141,6 +1141,53 @@ for(const x of [-2.48,2.48]){
   roomGroup.add(caseBase);
 }
 
+/* IN-WORLD SCOREBOARD — visible inside Quest VR, not just the 2D HUD. */
+const scoreCanvas=document.createElement('canvas');
+scoreCanvas.width=1024;
+scoreCanvas.height=300;
+const scoreCtx=scoreCanvas.getContext('2d');
+const scoreTexture=new THREE.CanvasTexture(scoreCanvas);
+
+function drawWorldScoreboard(red=12,black=12,redKings=0,blackKings=0){
+  scoreCtx.clearRect(0,0,1024,300);
+  scoreCtx.fillStyle='#080808';
+  scoreCtx.fillRect(0,0,1024,300);
+  scoreCtx.strokeStyle='#c9a227';
+  scoreCtx.lineWidth=14;
+  scoreCtx.strokeRect(8,8,1008,284);
+  scoreCtx.textAlign='center';
+  scoreCtx.fillStyle='#ffd95a';
+  scoreCtx.font='bold 40px Arial';
+  scoreCtx.fillText('MATCH SCOREBOARD',512,55);
+  scoreCtx.font='bold 34px Arial';
+  scoreCtx.fillStyle='#ff4048';
+  scoreCtx.fillText('RED',260,120);
+  scoreCtx.fillStyle='#f2f2f2';
+  scoreCtx.fillText('BLACK',764,120);
+  scoreCtx.font='bold 82px Arial';
+  scoreCtx.fillStyle='#ff4048';
+  scoreCtx.fillText(String(red),260,205);
+  scoreCtx.fillStyle='#f2f2f2';
+  scoreCtx.fillText(String(black),764,205);
+  scoreCtx.fillStyle='#ffd95a';
+  scoreCtx.font='bold 30px Arial';
+  scoreCtx.fillText('VS',512,185);
+  scoreCtx.font='24px Arial';
+  scoreCtx.fillStyle='#d8d8d8';
+  scoreCtx.fillText('KINGS  '+redKings,260,258);
+  scoreCtx.fillText('KINGS  '+blackKings,764,258);
+  scoreTexture.needsUpdate=true;
+}
+drawWorldScoreboard();
+
+const worldScoreboard=new THREE.Mesh(
+  new THREE.PlaneGeometry(1.85,.54),
+  new THREE.MeshBasicMaterial({map:scoreTexture,toneMapped:false,side:THREE.DoubleSide})
+);
+worldScoreboard.position.set(0,2.73,-.205);
+worldScoreboard.renderOrder=3;
+roomGroup.add(worldScoreboard);
+
 /* GAME */
 
 const board=new THREE.Group();
@@ -2084,6 +2131,9 @@ function updateScore(){
 
   if(blackKing)
     blackKing.textContent=blackKings;
+
+  /* Keep the physical VR scoreboard synchronized with the match. */
+  drawWorldScoreboard(red,black,redKings,blackKings);
 
 }
 
