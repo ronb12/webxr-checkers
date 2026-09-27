@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bradley VR Checkers</title>
+<style>
+body{margin:0;background:#111;color:white;font-family:Arial;text-align:center}
+h1{margin:14px}
+#game{display:grid;grid-template-columns:repeat(8,1fr);width:min(90vw,650px);aspect-ratio:1;margin:auto;border:8px solid #5b351c}
+.square{display:flex;align-items:center;justify-content:center}
+.light{background:#d6b98c}
+.dark{background:#56351f}
+.piece{width:72%;height:72%;border-radius:50%;cursor:pointer;border:4px solid rgba(255,255,255,.25);box-sizing:border-box}
+.red{background:#c52c2c}
+.black{background:#111}
+.king{box-shadow:inset 0 0 0 7px gold}
+.selected{outline:5px solid #ffd700}
+#status{font-size:20px;margin:12px}
+</style>
+</head>
+<body>
+
+<h1>Bradley VR Checkers</h1>
+<div id="status">Red's Turn</div>
+<div id="game"></div>
+
+<script>
+const game=document.getElementById("game");
+const status=document.getElementById("status");
+
+let board=[];
+let turn="red";
+let selected=null;
+
+function setup(){
+ board=Array.from({length:8},()=>Array(8).fill(null));
+
+ for(let r=0;r<3;r++)
+  for(let c=0;c<8;c++)
+   if((r+c)%2===1) board[r][c]={color:"black",king:false};
+
+ for(let r=5;r<8;r++)
+  for(let c=0;c<8;c++)
+   if((r+c)%2===1) board[r][c]={color:"red",king:false};
+
+ draw();
+}
+
+function draw(){
+ game.innerHTML="";
+
+ for(let r=0;r<8;r++){
+  for(let c=0;c<8;c++){
+   const sq=document.createElement("div");
+   sq.className="square "+((r+c)%2?"dark":"light");
+   sq.dataset.r=r;
+   sq.dataset.c=c;
+
+   const p=board[r][c];
+
+   if(p){
+    const piece=document.createElement("div");
+    piece.className="piece "+p.color+(p.king?" king":"");
+
+    if(selected && selected.r===r && selected.c===c)
+      piece.classList.add("selected");
+
+    sq.appendChild(piece);
+   }
+
+   sq.addEventListener("click",()=>clickSquare(r,c));
+   game.appendChild(sq);
+  }
+ }
+}
+
+function clickSquare(r,c){
+
+ const target=board[r][c];
+
+ if(!selected){
+  if(target && target.color===turn){
+   selected={r,c};
+   draw();
+  }
+  return;
+ }
+
+ const piece=board[selected.r][selected.c];
+
+ if(target && target.color===turn){
+  selected={r,c};
+  draw();
+  return;
+ }
+
+ const dr=r-selected.r;
+ const dc=c-selected.c;
+
+ const forward=piece.color==="red"?-1:1;
+
+ const normalMove=
+   Math.abs(dc)===1 &&
+   (piece.king?Math.abs(dr)===1:dr===forward);
+
+ if(normalMove && !target){
+   movePiece(r,c,false);
+   return;
+ }
+
+ const captureMove=
+   Math.abs(dc)===2 &&
+   (piece.king?Math.abs(dr)===2:dr===forward*2);
+
+ if(captureMove && !target){
+
+  const mr=(r+selected.r)/2;
+  const mc=(c+selected.c)/2;
+  const middle=board[mr][mc];
+
+  if(middle && middle.color!==piece.color){
+   board[mr][mc]=null;
+   movePiece(r,c,true);
+   return;
+  }
+ }
+
+ selected=null;
+ draw();
+}
+
+function movePiece(r,c,capture){
+
+ const piece=board[selected.r][selected.c];
+
+ board[r][c]=piece;
+ board[selected.r][selected.c]=null;
+
+ if(piece.color==="red" && r===0) piece.king=true;
+ if(piece.color==="black" && r===7) piece.king=true;
+
+ selected=null;
+ turn=turn==="red"?"black":"red";
+
+ status.textContent=
+   turn.charAt(0).toUpperCase()+turn.slice(1)+"'s Turn";
+
+ draw();
+}
+
+setup();
+</script>
+
+</body>
+</html>
