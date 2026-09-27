@@ -1,156 +1,1552 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bradley VR Checkers</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Bradley WebXR Checkers</title>
+
 <style>
-body{margin:0;background:#111;color:white;font-family:Arial;text-align:center}
-h1{margin:14px}
-#game{display:grid;grid-template-columns:repeat(8,1fr);width:min(90vw,650px);aspect-ratio:1;margin:auto;border:8px solid #5b351c}
-.square{display:flex;align-items:center;justify-content:center}
-.light{background:#d6b98c}
-.dark{background:#56351f}
-.piece{width:72%;height:72%;border-radius:50%;cursor:pointer;border:4px solid rgba(255,255,255,.25);box-sizing:border-box}
-.red{background:#c52c2c}
-.black{background:#111}
-.king{box-shadow:inset 0 0 0 7px gold}
-.selected{outline:5px solid #ffd700}
-#status{font-size:20px;margin:12px}
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#080808;
+  font-family:Arial,sans-serif;
+}
+#hud{
+  position:absolute;
+  top:18px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:10;
+  color:white;
+  text-align:center;
+  background:rgba(0,0,0,.72);
+  padding:12px 20px;
+  border:1px solid #c9a227;
+  border-radius:12px;
+  pointer-events:none;
+}
+#title{
+  color:#ffd95a;
+  font-weight:bold;
+  font-size:20px;
+}
+#status{
+  margin-top:5px;
+  font-size:15px;
+}
+#controls{
+  position:absolute;
+  bottom:18px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:10;
+  display:flex;
+  gap:8px;
+}
+button{
+  padding:10px 14px;
+  border:1px solid #c9a227;
+  border-radius:9px;
+  background:#151515;
+  color:white;
+  cursor:pointer;
+}
+button:hover{background:#292929}
 </style>
+
+<script type="importmap">
+{
+  "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  }
+}
+</script>
 </head>
+
 <body>
 
-<h1>Bradley VR Checkers</h1>
-<div id="status">Red's Turn</div>
-<div id="game"></div>
+<div id="hud">
+  <div id="title">BRADLEY WEBXR CHECKERS</div>
+  <div id="status">Red's Turn</div>
+<div id="score" style="margin-top:4px;font-size:13px;color:#ffd95a">
+Red: 12 &nbsp; | &nbsp; Black: 12
+</div>
+</div>
 
-<script>
-const game=document.getElementById("game");
-const status=document.getElementById("status");
+<div id="controls">
+  <button id="restart">Restart</button>
+<button id="gameMode">Human vs AI</button>
+<button id="difficulty">AI: Medium</button>
+  <button id="mode">Wall / Table</button>
+</div>
 
-let board=[];
-let turn="red";
+<script type="module">
+
+import * as THREE from 'three';
+import {VRButton} from 'three/addons/webxr/VRButton.js';
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x080808);
+
+const camera=new THREE.PerspectiveCamera(
+  70,
+  innerWidth/innerHeight,
+  .01,
+  100
+);
+
+camera.position.set(0,1.6,2.7);
+
+const renderer=new THREE.WebGLRenderer({
+  antialias:true
+});
+
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.xr.enabled=true;
+renderer.shadowMap.enabled=true;
+
+document.body.appendChild(renderer.domElement);
+document.body.appendChild(VRButton.createButton(renderer));
+
+scene.add(
+  new THREE.HemisphereLight(
+    0xffffff,
+    0x333333,
+    2.4
+  )
+);
+
+const keyLight=new THREE.DirectionalLight(
+  0xffffff,
+  3
+);
+
+keyLight.position.set(2,4,4);
+keyLight.castShadow=true;
+scene.add(keyLight);
+
+const goldLight=new THREE.PointLight(
+  0xffc83d,
+  5,
+  7
+);
+
+goldLight.position.set(0,2.8,2);
+scene.add(goldLight);
+
+
+/* ROOM */
+
+const floor=new THREE.Mesh(
+  new THREE.PlaneGeometry(12,12),
+  new THREE.MeshStandardMaterial({
+    color:0x181818,
+    roughness:.65
+  })
+);
+
+floor.rotation.x=-Math.PI/2;
+floor.receiveShadow=true;
+scene.add(floor);
+
+const wall=new THREE.Mesh(
+  new THREE.BoxGeometry(6,3.5,.12),
+  new THREE.MeshStandardMaterial({
+    color:0x202020,
+    roughness:.7
+  })
+);
+
+wall.position.set(0,1.7,-.28);
+wall.receiveShadow=true;
+scene.add(wall);
+
+
+/* GAME */
+
+const board=new THREE.Group();
+scene.add(board);
+
+const S=.23;
+
+let cells=[];
+let pieces=[];
+let state=[];
+let turn='red';
 let selected=null;
+let tableMode=false;
+let redCaptured=0;
+let blackCaptured=0;
+let forcedPiece=null;
+let gameOver=false;
 
-function setup(){
- board=Array.from({length:8},()=>Array(8).fill(null));
+let gameMode='ai';
+let aiDifficulty='medium';
+let aiThinking=false;
 
- for(let r=0;r<3;r++)
-  for(let c=0;c<8;c++)
-   if((r+c)%2===1) board[r][c]={color:"black",king:false};
+const raycaster=new THREE.Raycaster();
+const tempMatrix=new THREE.Matrix4();
 
- for(let r=5;r<8;r++)
-  for(let c=0;c<8;c++)
-   if((r+c)%2===1) board[r][c]={color:"red",king:false};
+function resetState(){
 
- draw();
+  state=Array.from(
+    {length:8},
+    ()=>Array(8).fill(null)
+  );
+
+  for(let r=0;r<3;r++)
+    for(let c=0;c<8;c++)
+      if((r+c)%2===1)
+        state[r][c]={
+          color:'black',
+          king:false
+        };
+
+  for(let r=5;r<8;r++)
+    for(let c=0;c<8;c++)
+      if((r+c)%2===1)
+        state[r][c]={
+          color:'red',
+          king:false
+        };
+
 }
 
-function draw(){
- game.innerHTML="";
+function clearBoard(){
 
- for(let r=0;r<8;r++){
-  for(let c=0;c<8;c++){
-   const sq=document.createElement("div");
-   sq.className="square "+((r+c)%2?"dark":"light");
-   sq.dataset.r=r;
-   sq.dataset.c=c;
+  while(board.children.length)
+    board.remove(board.children[0]);
 
-   const p=board[r][c];
+  cells=[];
+  pieces=[];
 
-   if(p){
-    const piece=document.createElement("div");
-    piece.className="piece "+p.color+(p.king?" king":"");
+}
 
-    if(selected && selected.r===r && selected.c===c)
-      piece.classList.add("selected");
+function squarePosition(r,c){
 
-    sq.appendChild(piece);
-   }
+  return new THREE.Vector3(
+    (c-3.5)*S,
+    (3.5-r)*S,
+    .045
+  );
 
-   sq.addEventListener("click",()=>clickSquare(r,c));
-   game.appendChild(sq);
+}
+
+function createBoard(){
+
+  clearBoard();
+
+  /* FRAME */
+
+  const frame=new THREE.Mesh(
+    new THREE.BoxGeometry(
+      S*8+.16,
+      S*8+.16,
+      .09
+    ),
+    new THREE.MeshStandardMaterial({
+      color:0xb68a25,
+      metalness:.75,
+      roughness:.23
+    })
+  );
+
+  frame.position.z=-.025;
+  frame.castShadow=true;
+  board.add(frame);
+
+
+  /* SQUARES */
+
+  for(let r=0;r<8;r++){
+
+    for(let c=0;c<8;c++){
+
+      const playable=(r+c)%2===1;
+
+      const mat=new THREE.MeshStandardMaterial({
+        color:playable ? 0x333333 : 0xe7d5a5,
+        roughness:.42,
+        metalness:playable ? .2 : .05
+      });
+
+      const sq=new THREE.Mesh(
+        new THREE.BoxGeometry(
+          S-.006,
+          S-.006,
+          .045
+        ),
+        mat
+      );
+
+      sq.position.copy(
+        squarePosition(r,c)
+      );
+
+      sq.userData={
+        type:'square',
+        row:r,
+        col:c,
+        playable
+      };
+
+      sq.castShadow=true;
+      sq.receiveShadow=true;
+
+      board.add(sq);
+      cells.push(sq);
+
+    }
+
   }
- }
-}
 
-function clickSquare(r,c){
 
- const target=board[r][c];
+  /* PIECES */
 
- if(!selected){
-  if(target && target.color===turn){
-   selected={r,c};
-   draw();
+  for(let r=0;r<8;r++){
+
+    for(let c=0;c<8;c++){
+
+      const data=state[r][c];
+
+      if(!data) continue;
+
+      createPiece(
+        r,
+        c,
+        data
+      );
+
+    }
+
   }
-  return;
- }
 
- const piece=board[selected.r][selected.c];
+}
 
- if(target && target.color===turn){
-  selected={r,c};
-  draw();
-  return;
- }
+function createPiece(r,c,data){
 
- const dr=r-selected.r;
- const dc=c-selected.c;
+  /*
+  Black pieces intentionally use charcoal
+  instead of pure black so they remain
+  visible on the dark squares.
+  */
 
- const forward=piece.color==="red"?-1:1;
+  const color=
+    data.color==='red'
+      ? 0xd91f26
+      : 0x181818;
 
- const normalMove=
-   Math.abs(dc)===1 &&
-   (piece.king?Math.abs(dr)===1:dr===forward);
+  const material=
+    new THREE.MeshPhysicalMaterial({
+      color,
+      metalness:.25,
+      roughness:.32,
+      clearcoat:.8,
+      clearcoatRoughness:.18
+    });
 
- if(normalMove && !target){
-   movePiece(r,c,false);
-   return;
- }
+  const piece=
+    new THREE.Mesh(
+      new THREE.CylinderGeometry(
+        .083,
+        .083,
+        .045,
+        40
+      ),
+      material
+    );
 
- const captureMove=
-   Math.abs(dc)===2 &&
-   (piece.king?Math.abs(dr)===2:dr===forward*2);
+  piece.rotation.x=Math.PI/2;
 
- if(captureMove && !target){
+  piece.position.copy(
+    squarePosition(r,c)
+  );
 
-  const mr=(r+selected.r)/2;
-  const mc=(c+selected.c)/2;
-  const middle=board[mr][mc];
+  piece.position.z=.085;
 
-  if(middle && middle.color!==piece.color){
-   board[mr][mc]=null;
-   movePiece(r,c,true);
-   return;
+  piece.castShadow=true;
+
+  piece.userData={
+    type:'piece',
+    row:r,
+    col:c,
+    color:data.color
+  };
+
+
+  /* GOLD RIM */
+
+  const rim=new THREE.Mesh(
+    new THREE.TorusGeometry(
+      .068,
+      .008,
+      12,
+      36
+    ),
+    new THREE.MeshStandardMaterial({
+      color:0xffd34d,
+      metalness:.9,
+      roughness:.18
+    })
+  );
+
+  rim.position.z=.026;
+  piece.add(rim);
+
+
+  /* KING MARKER */
+
+  if(data.king){
+
+    const crown=new THREE.Mesh(
+      new THREE.TorusGeometry(
+        .035,
+        .009,
+        10,
+        30
+      ),
+      new THREE.MeshStandardMaterial({
+        color:0xffd34d,
+        metalness:1,
+        roughness:.15
+      })
+    );
+
+    crown.position.z=.03;
+    piece.add(crown);
+
   }
- }
 
- selected=null;
- draw();
+  board.add(piece);
+  pieces.push(piece);
+
 }
 
-function movePiece(r,c,capture){
 
- const piece=board[selected.r][selected.c];
+/* HIGHLIGHTS */
 
- board[r][c]=piece;
- board[selected.r][selected.c]=null;
+function clearHighlights(){
 
- if(piece.color==="red" && r===0) piece.king=true;
- if(piece.color==="black" && r===7) piece.king=true;
+  for(const cell of cells){
 
- selected=null;
- turn=turn==="red"?"black":"red";
+    if(cell.userData.playable)
+      cell.material.color.set(0x333333);
 
- status.textContent=
-   turn.charAt(0).toUpperCase()+turn.slice(1)+"'s Turn";
+  }
 
- draw();
 }
 
-setup();
+function highlightMoves(r,c){
+
+  clearHighlights();
+
+  const moves=legalMovesFor(r,c);
+
+  for(const move of moves){
+
+    highlightSquare(
+      move.row,
+      move.col,
+      move.capture
+        ? 0xff9f1c
+        : 0x24c96b
+    );
+  }
+}
+
+function highlightSquare(r,c,color){
+
+  const cell=cells.find(
+    x=>
+      x.userData.row===r &&
+      x.userData.col===c
+  );
+
+  if(cell)
+    cell.material.color.set(color);
+
+}
+
+
+
+/* COMPLETE GAME RULES */
+
+function inside(r,c){
+  return r>=0 && r<8 && c>=0 && c<8;
+}
+
+function directionsFor(piece){
+
+  if(piece.king)
+    return [[-1,-1],[-1,1],[1,-1],[1,1]];
+
+  return piece.color==='red'
+    ? [[-1,-1],[-1,1]]
+    : [[1,-1],[1,1]];
+}
+
+function capturesFor(r,c){
+
+  const piece=state[r][c];
+  if(!piece) return [];
+
+  const moves=[];
+
+  for(const [dr,dc] of directionsFor(piece)){
+
+    const mr=r+dr;
+    const mc=c+dc;
+    const nr=r+dr*2;
+    const nc=c+dc*2;
+
+    if(
+      inside(nr,nc) &&
+      inside(mr,mc) &&
+      state[mr][mc] &&
+      state[mr][mc].color!==piece.color &&
+      !state[nr][nc]
+    ){
+      moves.push({
+        row:nr,
+        col:nc,
+        capture:{row:mr,col:mc}
+      });
+    }
+  }
+
+  return moves;
+}
+
+function normalMovesFor(r,c){
+
+  const piece=state[r][c];
+  if(!piece) return [];
+
+  const moves=[];
+
+  for(const [dr,dc] of directionsFor(piece)){
+
+    const nr=r+dr;
+    const nc=c+dc;
+
+    if(
+      inside(nr,nc) &&
+      !state[nr][nc]
+    ){
+      moves.push({
+        row:nr,
+        col:nc,
+        capture:null
+      });
+    }
+  }
+
+  return moves;
+}
+
+function playerHasCapture(color){
+
+  for(let r=0;r<8;r++)
+    for(let c=0;c<8;c++)
+      if(
+        state[r][c] &&
+        state[r][c].color===color &&
+        capturesFor(r,c).length
+      )
+        return true;
+
+  return false;
+}
+
+function legalMovesFor(r,c){
+
+  const piece=state[r][c];
+
+  if(!piece || piece.color!==turn)
+    return [];
+
+  const captures=capturesFor(r,c);
+
+  if(playerHasCapture(turn))
+    return captures;
+
+  return [
+    ...captures,
+    ...normalMovesFor(r,c)
+  ];
+}
+
+function updateScore(){
+
+  let red=0;
+  let black=0;
+
+  for(const row of state)
+    for(const piece of row)
+      if(piece){
+        if(piece.color==='red') red++;
+        else black++;
+      }
+
+  document.getElementById('score').innerHTML=
+    'Red: '+red+
+    ' &nbsp; | &nbsp; Black: '+black;
+}
+
+function hasAnyMove(color){
+
+  const oldTurn=turn;
+  turn=color;
+
+  let found=false;
+
+  for(let r=0;r<8 && !found;r++)
+    for(let c=0;c<8;c++)
+      if(
+        state[r][c] &&
+        state[r][c].color===color &&
+        legalMovesFor(r,c).length
+      ){
+        found=true;
+        break;
+      }
+
+  turn=oldTurn;
+  return found;
+}
+
+function checkWinner(){
+
+  let red=0;
+  let black=0;
+
+  for(const row of state)
+    for(const piece of row)
+      if(piece){
+        if(piece.color==='red') red++;
+        else black++;
+      }
+
+  let winner=null;
+
+  if(red===0) winner='Black';
+  else if(black===0) winner='Red';
+  else if(!hasAnyMove(turn))
+    winner=turn==='red' ? 'Black' : 'Red';
+
+  if(winner){
+
+    gameOver=true;
+
+    document.getElementById(
+      'status'
+    ).textContent=
+      winner+' Wins! 🏆';
+
+  }
+}
+
+function pulseHaptics(){
+
+  for(let i=0;i<2;i++){
+
+    const source=
+      renderer.xr
+      .getController(i)
+      .userData
+      .inputSource;
+
+    const actuator=
+      source?.gamepad?.hapticActuators?.[0];
+
+    if(actuator)
+      actuator.pulse(.6,70);
+  }
+}
+
+
+/* MOVEMENT */
+
+function attemptMove(r,c){
+
+  if(!selected || gameOver)
+    return;
+
+  const sr=selected.row;
+  const sc=selected.col;
+
+  const piece=state[sr][sc];
+
+  if(!piece)
+    return;
+
+  const legal=
+    legalMovesFor(sr,sc);
+
+  const move=
+    legal.find(
+      m=>m.row===r && m.col===c
+    );
+
+  if(!move)
+    return;
+
+  state[r][c]=piece;
+  state[sr][sc]=null;
+
+  if(move.capture){
+
+    state[
+      move.capture.row
+    ][
+      move.capture.col
+    ]=null;
+
+    pulseHaptics();
+  }
+
+  /* KING PROMOTION */
+
+  if(
+    piece.color==='red' &&
+    r===0
+  ){
+    piece.king=true;
+  }
+
+  if(
+    piece.color==='black' &&
+    r===7
+  ){
+    piece.king=true;
+  }
+
+  /*
+  MULTI-JUMP:
+  after a capture, the same piece
+  must continue if another capture exists.
+  */
+
+  if(move.capture){
+
+    const more=
+      capturesFor(r,c);
+
+    if(more.length){
+
+      selected={
+        row:r,
+        col:c
+      };
+
+      forcedPiece={
+        row:r,
+        col:c
+      };
+
+      createBoard();
+      highlightMoves(r,c);
+      updateScore();
+
+      document.getElementById(
+        'status'
+      ).textContent=
+        capitalize(turn)+
+        ': Continue Jump';
+
+      return;
+    }
+  }
+
+  forcedPiece=null;
+  selected=null;
+
+  turn=
+    turn==='red'
+      ? 'black'
+      : 'red';
+
+  createBoard();
+  updateScore();
+
+  document.getElementById(
+    'status'
+  ).textContent=
+    capitalize(turn)+"'s Turn";
+
+  checkWinner();
+
+  if(
+    !gameOver &&
+    gameMode==='ai' &&
+    turn==='black'
+  ){
+    startAI();
+  }
+}
+
+function capitalize(s){
+
+  return s.charAt(0).toUpperCase()+
+         s.slice(1);
+
+}
+
+
+
+/* =========================================
+   BRADLEY CHECKERS AI
+========================================= */
+
+function allLegalMoves(color){
+
+  const oldTurn=turn;
+  turn=color;
+
+  const moves=[];
+  const mustCapture=playerHasCapture(color);
+
+  for(let r=0;r<8;r++){
+
+    for(let c=0;c<8;c++){
+
+      const piece=state[r][c];
+
+      if(!piece || piece.color!==color)
+        continue;
+
+      const list=
+        mustCapture
+          ? capturesFor(r,c)
+          : legalMovesFor(r,c);
+
+      for(const move of list){
+
+        moves.push({
+          from:{row:r,col:c},
+          to:{
+            row:move.row,
+            col:move.col
+          },
+          capture:move.capture
+        });
+
+      }
+
+    }
+
+  }
+
+  turn=oldTurn;
+
+  return moves;
+}
+
+
+function scoreAIMove(move){
+
+  let score=Math.random()*2;
+
+  const piece=
+    state[
+      move.from.row
+    ][
+      move.from.col
+    ];
+
+  /* Captures are valuable */
+
+  if(move.capture)
+    score+=25;
+
+  /* Prefer promotion */
+
+  if(
+    piece &&
+    !piece.king &&
+    (
+      (
+        piece.color==='black' &&
+        move.to.row===7
+      ) ||
+      (
+        piece.color==='red' &&
+        move.to.row===0
+      )
+    )
+  ){
+    score+=35;
+  }
+
+  /* Prefer center control */
+
+  if(
+    move.to.col>=2 &&
+    move.to.col<=5
+  ){
+    score+=5;
+  }
+
+  /* Kings are strategically valuable */
+
+  if(piece?.king)
+    score+=7;
+
+  /* Edge squares are safer */
+
+  if(
+    move.to.col===0 ||
+    move.to.col===7
+  ){
+    score+=3;
+  }
+
+  return score;
+}
+
+
+function chooseAIMove(){
+
+  const moves=
+    allLegalMoves('black');
+
+  if(!moves.length)
+    return null;
+
+
+  /* EASY = mostly random */
+
+  if(aiDifficulty==='easy'){
+
+    return moves[
+      Math.floor(
+        Math.random()*moves.length
+      )
+    ];
+
+  }
+
+
+  /* MEDIUM */
+
+  if(aiDifficulty==='medium'){
+
+    const captures=
+      moves.filter(
+        m=>m.capture
+      );
+
+    if(
+      captures.length &&
+      Math.random()>.25
+    ){
+
+      return captures[
+        Math.floor(
+          Math.random()*
+          captures.length
+        )
+      ];
+
+    }
+
+    return moves[
+      Math.floor(
+        Math.random()*moves.length
+      )
+    ];
+
+  }
+
+
+  /* HARD / EXPERT */
+
+  const ranked=
+    moves
+      .map(m=>({
+        move:m,
+        score:scoreAIMove(m)
+      }))
+      .sort(
+        (a,b)=>b.score-a.score
+      );
+
+
+  if(aiDifficulty==='hard'){
+
+    const top=
+      ranked.slice(
+        0,
+        Math.min(3,ranked.length)
+      );
+
+    return top[
+      Math.floor(
+        Math.random()*top.length
+      )
+    ].move;
+
+  }
+
+
+  /* EXPERT */
+
+  return ranked[0].move;
+}
+
+
+function performAIMove(move){
+
+  if(!move || gameOver)
+    return;
+
+  selected={
+    row:move.from.row,
+    col:move.from.col
+  };
+
+  attemptMove(
+    move.to.row,
+    move.to.col
+  );
+
+
+  /*
+  attemptMove keeps turn on Black
+  during mandatory multi-jumps.
+  */
+
+  if(
+    !gameOver &&
+    turn==='black' &&
+    forcedPiece
+  ){
+
+    setTimeout(
+      ()=>{
+
+        const jumps=
+          capturesFor(
+            forcedPiece.row,
+            forcedPiece.col
+          );
+
+        if(jumps.length){
+
+          const jump=jumps[0];
+
+          selected={
+            row:forcedPiece.row,
+            col:forcedPiece.col
+          };
+
+          attemptMove(
+            jump.row,
+            jump.col
+          );
+
+          if(
+            turn==='black' &&
+            forcedPiece
+          ){
+            performAIMultiJump();
+          }else{
+            finishAI();
+          }
+
+        }
+
+      },
+      450
+    );
+
+    return;
+  }
+
+  finishAI();
+}
+
+
+function performAIMultiJump(){
+
+  if(
+    gameOver ||
+    turn!=='black' ||
+    !forcedPiece
+  ){
+    finishAI();
+    return;
+  }
+
+  setTimeout(
+    ()=>{
+
+      const jumps=
+        capturesFor(
+          forcedPiece.row,
+          forcedPiece.col
+        );
+
+      if(!jumps.length){
+
+        finishAI();
+        return;
+
+      }
+
+      const jump=jumps[0];
+
+      selected={
+        row:forcedPiece.row,
+        col:forcedPiece.col
+      };
+
+      attemptMove(
+        jump.row,
+        jump.col
+      );
+
+      if(
+        turn==='black' &&
+        forcedPiece
+      ){
+        performAIMultiJump();
+      }else{
+        finishAI();
+      }
+
+    },
+    450
+  );
+}
+
+
+function finishAI(){
+
+  aiThinking=false;
+
+  if(!gameOver){
+
+    document.getElementById(
+      'status'
+    ).textContent=
+      capitalize(turn)+"'s Turn";
+
+  }
+
+}
+
+
+function startAI(){
+
+  if(
+    gameMode!=='ai' ||
+    turn!=='black' ||
+    gameOver ||
+    aiThinking
+  ){
+    return;
+  }
+
+  aiThinking=true;
+
+  document.getElementById(
+    'status'
+  ).textContent=
+    'Black AI is thinking...';
+
+  setTimeout(
+    ()=>{
+
+      const move=
+        chooseAIMove();
+
+      if(!move){
+
+        aiThinking=false;
+        checkWinner();
+        return;
+
+      }
+
+      performAIMove(move);
+
+    },
+    650
+  );
+}
+
+
+/* SELECTION */
+
+function handleObject(obj){
+
+  if(!obj || aiThinking) return;
+
+  if(
+    gameMode==='ai' &&
+    turn==='black'
+  ) return;
+
+  const data=obj.userData;
+
+  if(data.type==='piece'){
+
+    const p=
+      state[data.row][data.col];
+
+    if(
+      p &&
+      p.color===turn &&
+      !gameOver
+    ){
+
+      if(
+        forcedPiece &&
+        (
+          forcedPiece.row!==data.row ||
+          forcedPiece.col!==data.col
+        )
+      ) return;
+
+      if(
+        playerHasCapture(turn) &&
+        capturesFor(
+          data.row,
+          data.col
+        ).length===0
+      ){
+
+        document.getElementById(
+          'status'
+        ).textContent=
+          capitalize(turn)+
+          ': Capture Required';
+
+        return;
+      }
+
+      selected={
+        row:data.row,
+        col:data.col
+      };
+
+      highlightMoves(
+        data.row,
+        data.col
+      );
+
+    }
+
+    return;
+
+  }
+
+  if(
+    data.type==='square' &&
+    data.playable
+  ){
+
+    attemptMove(
+      data.row,
+      data.col
+    );
+
+  }
+
+}
+
+
+/* DESKTOP CLICK */
+
+window.addEventListener(
+  'pointerdown',
+  e=>{
+
+    const mouse=
+      new THREE.Vector2(
+        e.clientX/innerWidth*2-1,
+        -(e.clientY/innerHeight)*2+1
+      );
+
+    raycaster.setFromCamera(
+      mouse,
+      camera
+    );
+
+    const hits=
+      raycaster.intersectObjects(
+        [...pieces,...cells],
+        false
+      );
+
+    if(hits.length)
+      handleObject(
+        hits[0].object
+      );
+
+  }
+);
+
+
+/* VR CONTROLLERS */
+
+function controller(index){
+
+  const ctrl=
+    renderer.xr.getController(index);
+
+  const line=
+    new THREE.Line(
+      new THREE.BufferGeometry()
+        .setFromPoints([
+          new THREE.Vector3(0,0,0),
+          new THREE.Vector3(0,0,-5)
+        ]),
+      new THREE.LineBasicMaterial({
+        color:0xffdd66
+      })
+    );
+
+  ctrl.add(line);
+
+  ctrl.addEventListener(
+    'selectstart',
+    ()=>{
+
+      tempMatrix
+        .identity()
+        .extractRotation(
+          ctrl.matrixWorld
+        );
+
+      raycaster.ray.origin
+        .setFromMatrixPosition(
+          ctrl.matrixWorld
+        );
+
+      raycaster.ray.direction
+        .set(0,0,-1)
+        .applyMatrix4(
+          tempMatrix
+        );
+
+      const hits=
+        raycaster.intersectObjects(
+          [...pieces,...cells],
+          false
+        );
+
+      if(hits.length)
+        handleObject(
+          hits[0].object
+        );
+
+    }
+  );
+
+  scene.add(ctrl);
+
+}
+
+controller(0);
+controller(1);
+
+
+/* RESET */
+
+document
+.getElementById('restart')
+.addEventListener(
+  'click',
+  ()=>{
+
+    turn='red';
+    selected=null;
+    forcedPiece=null;
+    gameOver=false;
+    redCaptured=0;
+    blackCaptured=0;
+
+    resetState();
+    createBoard();
+    updateScore();
+
+    document.getElementById(
+      'status'
+    ).textContent="Red's Turn";
+
+  }
+);
+
+
+/* WALL / TABLE MODE */
+
+document
+.getElementById('mode')
+.addEventListener(
+  'click',
+  ()=>{
+
+    tableMode=!tableMode;
+
+    if(tableMode){
+
+      board.rotation.x=
+        -Math.PI/2;
+
+      board.position.set(
+        0,
+        .82,
+        -.35
+      );
+
+    }else{
+
+      board.rotation.x=0;
+
+      board.position.set(
+        0,
+        1.6,
+        0
+      );
+
+    }
+
+  }
+);
+
+
+
+/* GAME MODE */
+
+document
+.getElementById('gameMode')
+.addEventListener(
+  'click',
+  ()=>{
+
+    if(aiThinking)
+      return;
+
+    gameMode=
+      gameMode==='ai'
+        ? 'human'
+        : 'ai';
+
+    document.getElementById(
+      'gameMode'
+    ).textContent=
+      gameMode==='ai'
+        ? 'Human vs AI'
+        : 'Human vs Human';
+
+    turn='red';
+    selected=null;
+    forcedPiece=null;
+    gameOver=false;
+    aiThinking=false;
+
+    resetState();
+    createBoard();
+    updateScore();
+
+    document.getElementById(
+      'status'
+    ).textContent=
+      "Red's Turn";
+
+  }
+);
+
+
+/* AI DIFFICULTY */
+
+const difficultyOrder=[
+  'easy',
+  'medium',
+  'hard',
+  'expert'
+];
+
+document
+.getElementById('difficulty')
+.addEventListener(
+  'click',
+  ()=>{
+
+    let i=
+      difficultyOrder.indexOf(
+        aiDifficulty
+      );
+
+    i=
+      (i+1)%
+      difficultyOrder.length;
+
+    aiDifficulty=
+      difficultyOrder[i];
+
+    document.getElementById(
+      'difficulty'
+    ).textContent=
+      'AI: '+
+      capitalize(
+        aiDifficulty
+      );
+
+  }
+);
+
+
+/* INITIAL */
+
+resetState();
+
+board.position.set(
+  0,
+  1.6,
+  0
+);
+
+createBoard();
+updateScore();
+
+
+window.addEventListener(
+  'resize',
+  ()=>{
+
+    camera.aspect=
+      innerWidth/innerHeight;
+
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(
+      innerWidth,
+      innerHeight
+    );
+
+  }
+);
+
+
+renderer.setAnimationLoop(
+  ()=>{
+
+    renderer.render(
+      scene,
+      camera
+    );
+
+  }
+);
+
 </script>
-
 </body>
 </html>
