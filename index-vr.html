@@ -292,6 +292,7 @@ button:hover{background:#292929}
 <button id="difficulty">AI: Medium</button>
 <button id="hostOnline">Host Online</button>
 <button id="joinOnline">Join Online</button>
+<button id="invitePlayer">Invite Player</button>
   <button id="mode">Wall / Table</button>
 </div>
 
@@ -1067,6 +1068,73 @@ howToPanel.position.set(2.925,1.72,4.50);
 howToPanel.rotation.y=-Math.PI/2;
 roomGroup.add(howToPanel);
 
+
+/* VR PLAYER INVITE PANEL — point and pull trigger to invite/accept/decline. */
+const inviteCanvas=document.createElement('canvas');
+inviteCanvas.width=768; inviteCanvas.height=1024;
+const inviteTexture=new THREE.CanvasTexture(inviteCanvas);
+const invitePanel=new THREE.Mesh(
+  new THREE.PlaneGeometry(1.18,1.58),
+  new THREE.MeshBasicMaterial({map:inviteTexture,toneMapped:false,side:THREE.DoubleSide})
+);
+invitePanel.position.set(-2.925,1.72,4.50);
+invitePanel.rotation.y=Math.PI/2;
+roomGroup.add(invitePanel);
+
+let invitePlayers=[];
+let pendingInvite=null;
+const inviteHitTargets=[];
+function makeInviteHit(type,index,y,z=4.50,width=.98){
+  const hit=new THREE.Mesh(
+    new THREE.PlaneGeometry(width,.115),
+    new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide})
+  );
+  hit.position.set(-2.915,y,z);
+  hit.rotation.y=Math.PI/2;
+  hit.userData={type,index};
+  roomGroup.add(hit); inviteHitTargets.push(hit);
+  return hit;
+}
+/* Incoming invite buttons line up with the green/red buttons; player rows line up with their names. */
+makeInviteHit('acceptInvite',0,2.06,4.72,.43);
+makeInviteHit('declineInvite',0,2.06,4.28,.43);
+for(let i=0;i<5;i++) makeInviteHit('invitePlayerRow',i,1.79-i*.17);
+
+function drawInvitePanel(){
+  const x=inviteCanvas.getContext('2d');
+  x.fillStyle='#090909';x.fillRect(0,0,768,1024);
+  x.strokeStyle='#c9a227';x.lineWidth=14;x.strokeRect(10,10,748,1004);
+  x.textAlign='center';x.fillStyle='#ffd95a';x.font='bold 46px Arial';x.fillText('ONLINE PLAY',384,72);
+  x.fillStyle='#eee';x.font='24px Arial';x.fillText('Point + trigger to invite a player',384,112);
+  if(pendingInvite){
+    x.fillStyle='#ffd95a';x.font='bold 28px Arial';x.fillText('GAME INVITE FROM',384,175);
+    x.fillStyle='#fff';x.font='bold 38px Arial';x.fillText(String(pendingInvite.sender_name).slice(0,20),384,220);
+    x.fillStyle='#236b38';x.fillRect(75,250,280,78);x.fillStyle='#fff';x.font='bold 28px Arial';x.fillText('ACCEPT',215,300);
+    x.fillStyle='#6b2525';x.fillRect(413,250,280,78);x.fillStyle='#fff';x.fillText('DECLINE',553,300);
+  }else{
+    x.fillStyle='#aaa';x.font='24px Arial';x.fillText('No incoming invite',384,220);
+  }
+  x.fillStyle='#ffd95a';x.font='bold 28px Arial';x.fillText('REGISTERED PLAYERS',384,405);
+  if(!invitePlayers.length){x.fillStyle='#aaa';x.font='24px Arial';x.fillText('No other players registered yet',384,465);}
+  invitePlayers.slice(0,5).forEach((name,i)=>{
+    const y=465+i*110;x.fillStyle='#1d1d1d';x.fillRect(75,y-48,618,82);x.strokeStyle='#c9a227';x.lineWidth=3;x.strokeRect(75,y-48,618,82);
+    x.textAlign='left';x.fillStyle='#fff';x.font='bold 28px Arial';x.fillText(String(name).slice(0,20),105,y+3);
+    x.textAlign='right';x.fillStyle='#ffd95a';x.font='bold 24px Arial';x.fillText('INVITE',660,y+3);
+  });
+  x.textAlign='center';x.fillStyle='#888';x.font='21px Arial';x.fillText('Room codes remain available as a backup',384,965);
+  inviteTexture.needsUpdate=true;
+}
+drawInvitePanel();
+
+async function refreshInvitePlayers(){
+  if(!bcPlayerName) return;
+  try{const r=await fetch('/api/players?deviceId='+encodeURIComponent(bcDeviceId),{cache:'no-store'});if(r.ok){invitePlayers=await r.json();drawInvitePanel();}}catch(e){console.warn('Player invite list unavailable',e);}
+}
+async function pollInvites(){
+  if(!bcPlayerName) return;
+  try{const r=await fetch('/api/invites?deviceId='+encodeURIComponent(bcDeviceId),{cache:'no-store'});if(r.ok){const next=await r.json();const isNew=next&&(!pendingInvite||next.id!==pendingInvite.id);pendingInvite=next;drawInvitePanel();if(isNew){onlineStatus('INVITE FROM '+next.sender_name);document.getElementById('status').textContent=next.sender_name+' invited you to play';gameTone(520,.16,.04,'sine');setTimeout(()=>gameTone(660,.18,.04,'sine'),180);}}}catch(e){console.warn('Invite check unavailable',e);}
+}
+
 async function refreshLeaderboard(){
   try{
     const r=await fetch('/api/leaderboard',{cache:'no-store'});
@@ -1080,20 +1148,22 @@ async function registerBradleyPlayer(name){
     return;
   }
 
-  /* Enter immediately; database sync happens in the background. */
-  bcPlayerName=clean;
-  localStorage.setItem(BC_NAME_KEY,clean);
-  document.getElementById('playerSetup').style.display='none';
-
   try{
     const r=await fetch('/api/player',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId:bcDeviceId,name:clean})});
-    if(!r.ok) throw new Error('Player registration failed');
-    const player=await r.json();
-    bcPlayerName=player.player_name||clean;
+    const data=await r.json();
+    if(!r.ok){
+      alert(data.error||'Player registration failed');
+      return;
+    }
+    bcPlayerName=data.player_name||clean;
     localStorage.setItem(BC_NAME_KEY,bcPlayerName);
+    document.getElementById('playerSetup').style.display='none';
     refreshLeaderboard();
+    refreshInvitePlayers();
+    pollInvites();
   }catch(e){
-    console.warn('Player will sync when the leaderboard service is available.',e);
+    alert('Player registration service is unavailable. Please try again.');
+    console.warn('Player registration unavailable.',e);
   }
 }
 document.getElementById('savePlayerName').addEventListener('click',()=>{
@@ -1303,38 +1373,52 @@ function createOnlinePeer(id){
   return new Peer(id,{debug:0});
 }
 
-document.getElementById('hostOnline').addEventListener('click',()=>{
+function hostOnlineRoom(code,waitingText='Waiting for Black player…'){
   if(onlinePeer) onlinePeer.destroy();
-  onlineRoomCode=Math.random().toString(36).slice(2,8).toUpperCase();
+  onlineRoomCode=code||Math.random().toString(36).slice(2,8).toUpperCase();
   onlineColor='red';
   onlineStatus('CREATING ONLINE ROOM…');
   onlinePeer=createOnlinePeer('bradley-checkers-'+onlineRoomCode.toLowerCase());
   onlinePeer.on('open',()=>{
-    gameMode='online';
-    turn='red'; selected=null; forcedPiece=null; gameOver=false; leaderboardResultReported=false;
-    redCaptured=0; blackCaptured=0; resetState(); createBoard(); updateScore();
-    onlineStatus('ROOM '+onlineRoomCode+' • SHARE CODE');
-    document.getElementById('status').textContent='Waiting for Black player…';
+    gameMode='online';turn='red';selected=null;forcedPiece=null;gameOver=false;leaderboardResultReported=false;
+    redCaptured=0;blackCaptured=0;resetState();createBoard();updateScore();
+    onlineStatus('ROOM '+onlineRoomCode+' • WAITING');document.getElementById('status').textContent=waitingText;
   });
   onlinePeer.on('connection',conn=>attachOnlineConnection(conn));
   onlinePeer.on('error',()=>onlineStatus('ROOM ERROR — TRY AGAIN'));
-});
-
-document.getElementById('joinOnline').addEventListener('click',()=>{
-  const code=(prompt('Enter Bradley Checkers room code:')||'').trim().toUpperCase();
-  if(!code) return;
-  if(onlinePeer) onlinePeer.destroy();
-  onlineRoomCode=code;
-  onlineColor='black';
-  onlineStatus('JOINING ROOM '+code+'…');
+}
+function joinOnlineRoom(code){
+  code=String(code||'').trim().toUpperCase();if(!code)return;
+  if(onlinePeer)onlinePeer.destroy();onlineRoomCode=code;onlineColor='black';onlineStatus('JOINING ROOM '+code+'…');
   onlinePeer=createOnlinePeer();
-  onlinePeer.on('open',()=>{
-    attachOnlineConnection(
-      onlinePeer.connect('bradley-checkers-'+code.toLowerCase(),{reliable:true})
-    );
-  });
+  onlinePeer.on('open',()=>attachOnlineConnection(onlinePeer.connect('bradley-checkers-'+code.toLowerCase(),{reliable:true})));
   onlinePeer.on('error',()=>onlineStatus('ROOM NOT FOUND / CONNECTION ERROR'));
-});
+}
+async function sendPlayerInvite(name){
+  if(!name)return;
+  const code=Math.random().toString(36).slice(2,8).toUpperCase();
+  hostOnlineRoom(code,'Invite sent to '+name+'…');
+  try{
+    const r=await fetch('/api/invites',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId:bcDeviceId,recipient:name,roomCode:code})});
+    if(!r.ok)throw new Error((await r.json()).error||'Invite failed');
+    onlineStatus('INVITED '+name.toUpperCase());
+  }catch(e){onlineStatus('INVITE FAILED');document.getElementById('status').textContent=e.message;}
+}
+async function respondToInvite(action){
+  if(!pendingInvite)return;
+  const invite={...pendingInvite};
+  try{
+    const r=await fetch('/api/invites',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId:bcDeviceId,inviteId:invite.id,action})});
+    if(!r.ok)throw new Error('Invite no longer available');
+    pendingInvite=null;drawInvitePanel();
+    if(action==='accept')joinOnlineRoom(invite.room_code);else onlineStatus('INVITE DECLINED');
+  }catch(e){onlineStatus('INVITE ERROR');}
+}
+
+document.getElementById('hostOnline').addEventListener('click',()=>hostOnlineRoom());
+document.getElementById('joinOnline').addEventListener('click',()=>{const code=(prompt('Enter Bradley Checkers room code:')||'').trim().toUpperCase();if(code)joinOnlineRoom(code);});
+document.getElementById('invitePlayer').addEventListener('click',async()=>{await refreshInvitePlayers();if(!invitePlayers.length){alert('No other registered players are available yet.');return;}const name=(prompt('Invite player ID:\n'+invitePlayers.slice(0,10).join('\n'))||'').trim();if(name)sendPlayerInvite(name);});
+refreshInvitePlayers();pollInvites();setInterval(refreshInvitePlayers,30000);setInterval(pollInvites,3000);
 
 /* Spatial-style game audio generated locally with Web Audio. */
 let audioCtx=null;
@@ -2701,6 +2785,20 @@ function handleObject(obj){
 
   const data=obj.userData;
 
+  if(data.type==='invitePlayerRow'){
+    const name=invitePlayers[data.index];
+    if(name) sendPlayerInvite(name);
+    return;
+  }
+  if(data.type==='acceptInvite'){
+    if(pendingInvite) respondToInvite('accept');
+    return;
+  }
+  if(data.type==='declineInvite'){
+    if(pendingInvite) respondToInvite('decline');
+    return;
+  }
+
   if(data.type==='piece'){
 
     const p=
@@ -2820,7 +2918,7 @@ window.addEventListener(
 
     const hits=
       raycaster.intersectObjects(
-        [...pieces,...cells],
+        [...inviteHitTargets,...pieces,...cells],
         false
       );
 
@@ -2885,7 +2983,7 @@ function controller(index){
 
       const hits=
         raycaster.intersectObjects(
-          [...pieces,...cells],
+          [...inviteHitTargets,...pieces,...cells],
           false
         );
 
