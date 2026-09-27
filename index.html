@@ -1181,11 +1181,20 @@ function drawWorldScoreboard(red=12,black=12,redKings=0,blackKings=0){
 drawWorldScoreboard();
 
 const worldScoreboard=new THREE.Mesh(
-  new THREE.PlaneGeometry(1.85,.54),
-  new THREE.MeshBasicMaterial({map:scoreTexture,toneMapped:false,side:THREE.DoubleSide})
+  new THREE.PlaneGeometry(2.15,.64),
+  new THREE.MeshBasicMaterial({
+    map:scoreTexture,
+    toneMapped:false,
+    side:THREE.DoubleSide,
+    depthTest:false
+  })
 );
-worldScoreboard.position.set(0,2.73,-.205);
-worldScoreboard.renderOrder=3;
+/* Put the match scoreboard directly above the wall-mounted checkerboard.
+   It is pulled forward from the back wall so it cannot be hidden by wall panels,
+   and it faces straight toward the default Quest player position at +Z. */
+worldScoreboard.position.set(0,3.02,.12);
+worldScoreboard.rotation.set(0,0,0);
+worldScoreboard.renderOrder=50;
 roomGroup.add(worldScoreboard);
 
 /* GAME */
