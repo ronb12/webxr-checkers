@@ -187,6 +187,49 @@ button:hover{background:#292929}
   #controls{grid-template-columns:repeat(2,1fr)}
   .playerStats{display:none}
 }
+
+/* LANDSCAPE PHONE / SHORT TABLET: keep the board clear for actual play. */
+@media (orientation:landscape) and (max-height:600px){
+  #hud{
+    top:4px;
+    width:min(430px,58vw);
+    padding:4px 7px;
+  }
+  #title{font-size:12px}
+  #matchLabel{display:none}
+  #players{margin-top:2px;gap:4px}
+  .playerPanel{padding:3px 6px}
+  .playerName{font-size:8px}
+  .playerScore{font-size:18px}
+  .playerStats{display:none}
+  #status{margin-top:2px;padding:2px 6px;font-size:8px}
+  #controls{
+    bottom:max(4px,env(safe-area-inset-bottom));
+    width:calc(100vw - 10px);
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:4px;
+  }
+  #controls button{
+    min-height:34px;
+    padding:4px 3px;
+    font-size:10px;
+    touch-action:manipulation;
+  }
+  #playerSetup>div{
+    max-height:calc(100vh - 16px);
+    padding:10px 16px!important;
+  }
+  #playerSetup h2{margin:0 0 4px!important;font-size:18px}
+  #playerSetup p{margin:5px 0;font-size:12px!important}
+  #playerNameInput{min-height:38px}
+  #savePlayerName{min-height:38px;margin-top:6px!important}
+}
+
+/* TABLETS: maintain comfortable touch targets in either orientation. */
+@media (min-width:701px) and (max-width:1100px) and (pointer:coarse){
+  #controls button{min-height:44px;touch-action:manipulation}
+}
 </style>
 
 <script type="importmap">
