@@ -792,8 +792,18 @@ for(const x of [-2.18,2.18]){
   medallion.position.set(0,1.105,.15);
   trophy.add(medallion);
 
+  /* Trophy lid and crown — physically connected to the cup instead of floating. */
+  const lid=new THREE.Mesh(new THREE.CylinderGeometry(.115,.17,.045,32),gold);
+  lid.position.y=1.275;
+  lid.castShadow=true;
+  trophy.add(lid);
+
+  const lidStem=new THREE.Mesh(new THREE.CylinderGeometry(.025,.035,.085,20),gold);
+  lidStem.position.y=1.335;
+  trophy.add(lidStem);
+
   const crown=new THREE.Mesh(new THREE.ConeGeometry(.065,.075,5),gold);
-  crown.position.set(0,1.36,0);
+  crown.position.set(0,1.405,0);
   trophy.add(crown);
 
   trophy.position.set(x,0,.48);
