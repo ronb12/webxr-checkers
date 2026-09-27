@@ -1475,8 +1475,8 @@ function kingCelebration(row,col){
 
   const light=new THREE.PointLight(
     0xffd34d,
-    8,
-    2.5
+    18,
+    4.5
   );
 
   light.position.copy(center);
@@ -1488,7 +1488,7 @@ function kingCelebration(row,col){
 
   const rings=[];
 
-  for(let i=0;i<3;i++){
+  for(let i=0;i<5;i++){
 
     const ring=new THREE.Mesh(
       new THREE.TorusGeometry(
@@ -1520,7 +1520,7 @@ function kingCelebration(row,col){
 
   const particles=[];
 
-  for(let i=0;i<28;i++){
+  for(let i=0;i<90;i++){
 
     const particle=new THREE.Mesh(
       new THREE.SphereGeometry(
@@ -1599,8 +1599,8 @@ function kingCelebration(row,col){
 
   const textMesh=new THREE.Mesh(
     new THREE.PlaneGeometry(
-      .65,
-      .16
+      1.25,
+      .32
     ),
     new THREE.MeshBasicMaterial({
       map:texture,
@@ -1615,8 +1615,33 @@ function kingCelebration(row,col){
 
   board.add(textMesh);
 
+  /* A large 3D gold crown rises and spins above the promoted checker. */
+  const crownMat=new THREE.MeshPhysicalMaterial({
+    color:0xffd34d,
+    metalness:.9,
+    roughness:.16,
+    emissive:0x6b3d00,
+    emissiveIntensity:.55
+  });
+  const celebrationCrown=new THREE.Group();
+  const crownBand=new THREE.Mesh(
+    new THREE.CylinderGeometry(.12,.12,.055,32),
+    crownMat
+  );
+  const crownTop=new THREE.Mesh(
+    new THREE.ConeGeometry(.15,.18,5),
+    crownMat
+  );
+  crownTop.position.y=.10;
+  celebrationCrown.add(crownBand,crownTop);
+  celebrationCrown.position.copy(center);
+  celebrationCrown.position.z+=.25;
+  celebrationCrown.rotation.x=Math.PI/2;
+  celebrationCrown.scale.setScalar(.1);
+  board.add(celebrationCrown);
+
   const start=performance.now();
-  const duration=1300;
+  const duration=2800;
 
   function animate(now){
 
@@ -1636,12 +1661,12 @@ function kingCelebration(row,col){
         0,
         Math.min(
           1,
-          (t*1300-ring.userData.delay)/700
+          (t*2800-ring.userData.delay)/1100
         )
       );
 
       ring.scale.setScalar(
-        1+local*3
+        1+local*5.5
       );
 
       ring.material.opacity=
@@ -1672,15 +1697,20 @@ function kingCelebration(row,col){
     textMesh.position.y=
       center.y+
       .16+
-      eased*.45;
+      eased*.85;
 
     textMesh.material.opacity=
       1-t;
 
-    /* Light fades */
+    /* Crown rises, grows and spins above the new king. */
+    const crownPop=Math.min(1,t*4);
+    celebrationCrown.scale.setScalar(.1+crownPop*.9);
+    celebrationCrown.position.z=center.z+.25+eased*.48;
+    celebrationCrown.rotation.z=t*Math.PI*6;
 
+    /* Light fades */
     light.intensity=
-      8*(1-t);
+      18*(1-t);
 
     if(t<1){
 
@@ -1707,6 +1737,12 @@ function kingCelebration(row,col){
       light.dispose?.();
 
       board.remove(textMesh);
+
+      board.remove(celebrationCrown);
+      celebrationCrown.traverse(o=>{
+        if(o.geometry) o.geometry.dispose();
+      });
+      crownMat.dispose();
 
       texture.dispose();
 
