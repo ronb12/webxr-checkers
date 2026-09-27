@@ -1475,8 +1475,8 @@ function kingCelebration(row,col){
 
   const light=new THREE.PointLight(
     0xffd34d,
-    18,
-    4.5
+    10,
+    3.2
   );
 
   light.position.copy(center);
@@ -1488,7 +1488,7 @@ function kingCelebration(row,col){
 
   const rings=[];
 
-  for(let i=0;i<5;i++){
+  for(let i=0;i<4;i++){
 
     const ring=new THREE.Mesh(
       new THREE.TorusGeometry(
@@ -1520,13 +1520,13 @@ function kingCelebration(row,col){
 
   const particles=[];
 
-  for(let i=0;i<90;i++){
+  for(let i=0;i<36;i++){
 
     const particle=new THREE.Mesh(
       new THREE.SphereGeometry(
         .012,
-        8,
-        8
+        5,
+        5
       ),
       new THREE.MeshBasicMaterial({
         color:0xffd34d
@@ -1599,8 +1599,8 @@ function kingCelebration(row,col){
 
   const textMesh=new THREE.Mesh(
     new THREE.PlaneGeometry(
-      1.25,
-      .32
+      .95,
+      .24
     ),
     new THREE.MeshBasicMaterial({
       map:texture,
@@ -1641,7 +1641,7 @@ function kingCelebration(row,col){
   board.add(celebrationCrown);
 
   const start=performance.now();
-  const duration=2800;
+  const duration=2200;
 
   function animate(now){
 
@@ -1661,12 +1661,12 @@ function kingCelebration(row,col){
         0,
         Math.min(
           1,
-          (t*2800-ring.userData.delay)/1100
+          (t*2200-ring.userData.delay)/900
         )
       );
 
       ring.scale.setScalar(
-        1+local*5.5
+        1+local*4.2
       );
 
       ring.material.opacity=
@@ -1697,7 +1697,7 @@ function kingCelebration(row,col){
     textMesh.position.y=
       center.y+
       .16+
-      eased*.85;
+      eased*.60;
 
     textMesh.material.opacity=
       1-t;
@@ -1710,7 +1710,7 @@ function kingCelebration(row,col){
 
     /* Light fades */
     light.intensity=
-      18*(1-t);
+      10*(1-t);
 
     if(t<1){
 
