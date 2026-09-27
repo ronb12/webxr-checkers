@@ -2415,7 +2415,6 @@ function allLegalMoves(color){
   turn=color;
 
   const moves=[];
-  const mustCapture=playerHasCapture(color);
 
   for(let r=0;r<8;r++){
 
@@ -2426,10 +2425,10 @@ function allLegalMoves(color){
       if(!piece || piece.color!==color)
         continue;
 
-      const list=
-        mustCapture
-          ? capturesFor(r,c)
-          : legalMovesFor(r,c);
+      /* Use the same player-choice rules as the human player.
+         Previously the AI still forced captures globally while humans did not.
+         That rule mismatch could make late-game AI behavior appear frozen. */
+      const list=legalMovesFor(r,c);
 
       for(const move of list){
 
