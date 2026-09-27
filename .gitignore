@@ -1,0 +1,8 @@
+.vercel
+.neon
+.env.local
+.env.vercel.local
+node_modules/
+index-vr-before-*.html
+index-vr-auto-backup-*.html
+*-backup*.html

@@ -121,6 +121,62 @@ button{
   cursor:pointer;
 }
 button:hover{background:#292929}
+
+/* PHONE / TABLET PLAYERS */
+@media (max-width:700px){
+  #hud{
+    top:6px;
+    width:calc(100vw - 12px);
+    padding:6px 8px;
+    border-radius:10px;
+  }
+  #title{font-size:14px}
+  #matchLabel{font-size:8px}
+  #players{gap:5px;margin-top:4px}
+  .playerPanel{
+    grid-template-columns:auto 28px;
+    column-gap:4px;
+    padding:4px 6px;
+  }
+  .playerName{font-size:9px}
+  .playerScore{font-size:20px}
+  .playerStats{font-size:7px;gap:4px}
+  #status{margin-top:4px;font-size:9px;padding:3px 8px}
+  #controls{
+    bottom:max(8px,env(safe-area-inset-bottom));
+    width:calc(100vw - 12px);
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:5px;
+  }
+  #controls button{
+    min-height:42px;
+    padding:6px 4px;
+    font-size:11px;
+    touch-action:manipulation;
+  }
+  #playerSetup>div{
+    width:calc(100vw - 32px)!important;
+    max-height:calc(100vh - 32px);
+    overflow:auto;
+    box-sizing:border-box;
+    padding:18px!important;
+  }
+  #playerNameInput{
+    width:100%!important;
+    box-sizing:border-box;
+    min-height:46px;
+    font-size:16px!important;
+  }
+  #savePlayerName{
+    width:100%;
+    min-height:46px;
+  }
+}
+@media (max-width:380px){
+  #controls{grid-template-columns:repeat(2,1fr)}
+  .playerStats{display:none}
+}
 </style>
 
 <script type="importmap">
@@ -167,10 +223,22 @@ button:hover{background:#292929}
   <div id="status">RED'S TURN</div>
 </div>
 
+<div id="playerSetup" style="position:absolute;inset:0;z-index:30;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;color:white;">
+  <div style="width:min(420px,88vw);padding:24px;border:1px solid #c9a227;border-radius:16px;background:#111;text-align:center;">
+    <h2 style="color:#ffd95a;margin-top:0">BRADLEY CHECKERS</h2>
+    <p>Enter your player name. This name will be locked to this headset/browser for leaderboard scores.</p>
+    <p style="color:#ffd95a;font-weight:700;font-size:14px">⚠️ PRIVACY: Do not enter your real name. Use your player/gamer name only.</p>
+    <input id="playerNameInput" maxlength="20" placeholder="Player name" style="width:80%;padding:12px;border-radius:8px;border:1px solid #c9a227;background:#080808;color:white;font-size:16px">
+    <button id="savePlayerName" style="margin-top:12px">Enter Championship Lounge</button>
+  </div>
+</div>
+
 <div id="controls">
   <button id="restart">Restart</button>
 <button id="gameMode">Human vs AI</button>
 <button id="difficulty">AI: Medium</button>
+<button id="hostOnline">Host Online</button>
+<button id="joinOnline">Join Online</button>
   <button id="mode">Wall / Table</button>
 </div>
 
@@ -178,6 +246,7 @@ button:hover{background:#292929}
 
 import * as THREE from 'three';
 import {VRButton} from 'three/addons/webxr/VRButton.js';
+import {Peer} from 'https://esm.sh/peerjs@1.5.5';
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x080808);
@@ -646,29 +715,79 @@ for(const z of [1.0,2.65,4.3]){
   roomGroup.add(glow);
 }
 
-/* Trophy pedestals */
+/* Realistic Bradley Checkers championship trophies */
 for(const x of [-2.18,2.18]){
-  const pedestal=new THREE.Mesh(
-    new THREE.BoxGeometry(.42,.72,.42),
-    marbleMat
-  );
-  pedestal.position.set(x,.36,.48);
+  const trophy=new THREE.Group();
+
+  const pedestal=new THREE.Mesh(new THREE.BoxGeometry(.46,.66,.46),marbleMat);
+  pedestal.position.y=.33;
   pedestal.castShadow=true;
-  roomGroup.add(pedestal);
+  trophy.add(pedestal);
 
-  const trophyCup=new THREE.Mesh(
-    new THREE.CylinderGeometry(.12,.075,.25,24),
-    brassMat
-  );
-  trophyCup.position.set(x,.88,.48);
-  roomGroup.add(trophyCup);
+  const base=new THREE.Mesh(new THREE.BoxGeometry(.30,.09,.25),woodMat);
+  base.position.y=.705;
+  base.castShadow=true;
+  trophy.add(base);
 
-  const trophyBase=new THREE.Mesh(
-    new THREE.BoxGeometry(.24,.08,.20),
-    woodMat
+  const gold=new THREE.MeshPhysicalMaterial({
+    color:0xffc83d,metalness:1,roughness:.12,
+    clearcoat:1,clearcoatRoughness:.08
+  });
+
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(.035,.055,.20,24),gold);
+  stem.position.y=.84;
+  trophy.add(stem);
+
+  const foot=new THREE.Mesh(new THREE.CylinderGeometry(.105,.13,.055,32),gold);
+  foot.position.y=.755;
+  trophy.add(foot);
+
+  /* Lathed cup gives a true flared trophy silhouette. */
+  const cupProfile=[
+    new THREE.Vector2(.045,0),
+    new THREE.Vector2(.075,.035),
+    new THREE.Vector2(.105,.10),
+    new THREE.Vector2(.145,.18),
+    new THREE.Vector2(.165,.27),
+    new THREE.Vector2(.17,.31)
+  ];
+  const cup=new THREE.Mesh(new THREE.LatheGeometry(cupProfile,40),gold);
+  cup.position.y=.94;
+  cup.castShadow=true;
+  trophy.add(cup);
+
+  const lip=new THREE.Mesh(new THREE.TorusGeometry(.17,.014,12,48),gold);
+  lip.rotation.x=Math.PI/2;
+  lip.position.y=1.25;
+  trophy.add(lip);
+
+  /* Curved handles */
+  for(const side of [-1,1]){
+    const curve=new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side*.145,1.18,0),
+      new THREE.Vector3(side*.25,1.16,0),
+      new THREE.Vector3(side*.26,1.04,0),
+      new THREE.Vector3(side*.145,1.01,0)
+    ]);
+    const handle=new THREE.Mesh(new THREE.TubeGeometry(curve,24,.014,10,false),gold);
+    trophy.add(handle);
+  }
+
+  /* Championship medallion */
+  const medallion=new THREE.Mesh(
+    new THREE.CylinderGeometry(.055,.055,.012,32),
+    new THREE.MeshPhysicalMaterial({color:0x111111,metalness:.45,roughness:.22,clearcoat:.8})
   );
-  trophyBase.position.set(x,.73,.48);
-  roomGroup.add(trophyBase);
+  medallion.rotation.x=Math.PI/2;
+  medallion.position.set(0,1.105,.15);
+  trophy.add(medallion);
+
+  const crown=new THREE.Mesh(new THREE.ConeGeometry(.065,.075,5),gold);
+  crown.position.set(0,1.36,0);
+  trophy.add(crown);
+
+  trophy.position.set(x,0,.48);
+  roomGroup.add(trophy);
 }
 
 /* Keep the lower front of the wall-mounted board completely clear in VR.
@@ -737,7 +856,9 @@ const brandSign=new THREE.Mesh(
     clearcoat:.65
   })
 );
-brandSign.position.set(0,2.67,-.115);
+/* Bradley Checkers sign now occupies the former creator-plaque position above the board. */
+brandSign.position.set(0,3.18,-.108);
+brandSign.scale.set(.88,.88,.88);
 roomGroup.add(brandSign);
 
 /* Creator / ownership plaque */
@@ -767,30 +888,126 @@ const creatorPlaque=new THREE.Mesh(
     clearcoatRoughness:.18
   })
 );
-creatorPlaque.position.set(0,2.13,-.108);
+/* Creator plaque mounted in a clear bay on the left wall, between wall sconces. */
+creatorPlaque.position.set(-2.925,1.58,1.30);
+creatorPlaque.rotation.y=Math.PI/2;
+creatorPlaque.scale.set(.72,.72,.72);
 roomGroup.add(creatorPlaque);
 
-/* Glass trophy cases */
-for(const x of [-2.35,2.35]){
-  const caseBody=new THREE.Mesh(
-    new THREE.BoxGeometry(.66,1.25,.42),
-    new THREE.MeshPhysicalMaterial({
-      color:0x9cc8d8,
-      transparent:true,
-      opacity:.13,
-      roughness:.08,
-      metalness:.05,
-      transmission:.55
-    })
+/* PERSISTENT PLAYER IDENTITY + RIGHT-WALL LEADERBOARD */
+const BC_DEVICE_KEY='bradley_checkers_device_id';
+const BC_NAME_KEY='bradley_checkers_player_name';
+let bcDeviceId=localStorage.getItem(BC_DEVICE_KEY);
+if(!bcDeviceId){
+  bcDeviceId=crypto.randomUUID ? crypto.randomUUID() : 'bc-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+  localStorage.setItem(BC_DEVICE_KEY,bcDeviceId);
+}
+let bcPlayerName=localStorage.getItem(BC_NAME_KEY)||'';
+
+const leaderboardCanvas=document.createElement('canvas');
+leaderboardCanvas.width=768; leaderboardCanvas.height=1024;
+const leaderboardTexture=new THREE.CanvasTexture(leaderboardCanvas);
+const leaderboardPanel=new THREE.Mesh(
+  new THREE.PlaneGeometry(1.18,1.58),
+  new THREE.MeshPhysicalMaterial({map:leaderboardTexture,roughness:.24,clearcoat:.7})
+);
+leaderboardPanel.position.set(2.925,1.72,1.30);
+leaderboardPanel.rotation.y=-Math.PI/2;
+roomGroup.add(leaderboardPanel);
+
+function drawLeaderboard(rows=[]){
+  const c=leaderboardCanvas, x=c.getContext('2d');
+  x.fillStyle='#090909'; x.fillRect(0,0,c.width,c.height);
+  x.strokeStyle='#c9a227'; x.lineWidth=14; x.strokeRect(10,10,c.width-20,c.height-20);
+  x.textAlign='center'; x.fillStyle='#ffd95a'; x.font='bold 46px Arial';
+  x.fillText('BRADLEY CHECKERS',c.width/2,72);
+  x.fillStyle='#fff'; x.font='bold 38px Arial'; x.fillText('LEADERBOARD',c.width/2,125);
+  x.textAlign='left'; x.font='bold 25px Arial'; x.fillStyle='#c9a227';
+  x.fillText('#',38,185); x.fillText('PLAYER',92,185); x.fillText('W',535,185); x.fillText('SCORE',600,185);
+  x.font='bold 27px Arial';
+  rows.slice(0,10).forEach((r,i)=>{
+    const y=245+i*72; x.fillStyle=i<3?'#ffd95a':'#eee';
+    x.fillText(String(i+1),40,y);
+    x.fillText(String(r.player_name||'PLAYER').slice(0,18),92,y);
+    x.fillText(String(r.wins||0),540,y);
+    x.fillText(String(r.score||0),620,y);
+  });
+  if(!rows.length){x.fillStyle='#aaa';x.fillText('No scores yet',92,245);}
+  leaderboardTexture.needsUpdate=true;
+}
+drawLeaderboard([]);
+
+async function refreshLeaderboard(){
+  try{
+    const r=await fetch('/api/leaderboard',{cache:'no-store'});
+    if(r.ok) drawLeaderboard(await r.json());
+  }catch(e){console.warn('Leaderboard unavailable',e);}
+}
+async function registerBradleyPlayer(name){
+  const clean=String(name||'').trim().replace(/[^a-zA-Z0-9 _-]/g,'').slice(0,20);
+  if(!clean){
+    alert('Enter a player/gamer name first.');
+    return;
+  }
+
+  /* Enter immediately; database sync happens in the background. */
+  bcPlayerName=clean;
+  localStorage.setItem(BC_NAME_KEY,clean);
+  document.getElementById('playerSetup').style.display='none';
+
+  try{
+    const r=await fetch('/api/player',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId:bcDeviceId,name:clean})});
+    if(!r.ok) throw new Error('Player registration failed');
+    const player=await r.json();
+    bcPlayerName=player.player_name||clean;
+    localStorage.setItem(BC_NAME_KEY,bcPlayerName);
+    refreshLeaderboard();
+  }catch(e){
+    console.warn('Player will sync when the leaderboard service is available.',e);
+  }
+}
+document.getElementById('savePlayerName').addEventListener('click',()=>{
+  registerBradleyPlayer(document.getElementById('playerNameInput').value);
+});
+document.getElementById('playerNameInput').addEventListener('keydown',(e)=>{
+  if(e.key==='Enter') registerBradleyPlayer(e.currentTarget.value);
+});
+if(bcPlayerName) document.getElementById('playerSetup').style.display='none';
+refreshLeaderboard();
+setInterval(refreshLeaderboard,30000);
+
+/* Glass trophy cases — kept well outside the checkerboard sightline. */
+for(const x of [-2.48,2.48]){
+  const glassMat=new THREE.MeshPhysicalMaterial({
+    color:0xb9e2ee,
+    transparent:true,
+    opacity:.09,
+    roughness:.12,
+    metalness:0,
+    transmission:.42,
+    depthWrite:false,
+    side:THREE.DoubleSide
+  });
+
+  /* Use thin glass panels instead of one overlapping transparent box. */
+  for(const dx of [-.31,.31]){
+    const side=new THREE.Mesh(new THREE.BoxGeometry(.018,1.18,.34),glassMat);
+    side.position.set(x+dx,1.58,.02);
+    roomGroup.add(side);
+  }
+
+  const glassFront=new THREE.Mesh(
+    new THREE.BoxGeometry(.64,1.18,.018),
+    glassMat
   );
-  caseBody.position.set(x,1.55,.12);
-  roomGroup.add(caseBody);
+  glassFront.position.set(x,1.58,.19);
+  roomGroup.add(glassFront);
 
   const caseBase=new THREE.Mesh(
-    new THREE.BoxGeometry(.76,.12,.52),
+    new THREE.BoxGeometry(.72,.12,.44),
     marbleMat
   );
-  caseBase.position.set(x,.90,.12);
+  caseBase.position.set(x,.94,.02);
   roomGroup.add(caseBase);
 }
 
@@ -812,10 +1029,126 @@ let redCaptured=0;
 let blackCaptured=0;
 let forcedPiece=null;
 let gameOver=false;
+let leaderboardResultReported=false;
+
+async function reportLeaderboardResult(result){
+  if(leaderboardResultReported || !bcPlayerName) return;
+  leaderboardResultReported=true;
+  try{
+    const r=await fetch('/api/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId:bcDeviceId,result})});
+    if(!r.ok) throw new Error('Result update failed');
+    await refreshLeaderboard();
+  }catch(e){
+    leaderboardResultReported=false;
+    console.warn('Score update unavailable',e);
+  }
+}
 
 let gameMode='ai';
 let aiDifficulty='medium';
 let aiThinking=false;
+
+/* ONLINE MULTIPLAYER — PeerJS WebRTC data channel. Host is Red, guest is Black. */
+let onlinePeer=null;
+let onlineConnection=null;
+let onlineColor=null;
+let onlineRoomCode=null;
+
+function onlineStatus(message){
+  document.getElementById('matchLabel').textContent=message;
+}
+
+function multiplayerSnapshot(){
+  return {
+    type:'state',
+    state:state.map(row=>row.map(p=>p ? {...p} : null)),
+    turn,
+    redCaptured,
+    blackCaptured,
+    forcedPiece:forcedPiece ? {...forcedPiece} : null,
+    gameOver
+  };
+}
+
+function sendOnlineState(){
+  if(gameMode==='online' && onlineConnection && onlineConnection.open){
+    onlineConnection.send(multiplayerSnapshot());
+  }
+}
+
+function applyOnlineState(msg){
+  if(!msg || msg.type!=='state') return;
+  state=msg.state;
+  turn=msg.turn;
+  redCaptured=msg.redCaptured||0;
+  blackCaptured=msg.blackCaptured||0;
+  forcedPiece=msg.forcedPiece||null;
+  gameOver=!!msg.gameOver;
+  selected=null;
+  selectedPieceMesh=null;
+  createBoard();
+  updateScore();
+  document.getElementById('status').textContent=
+    gameOver ? 'GAME OVER' :
+    (turn===onlineColor ? 'YOUR TURN — '+turn.toUpperCase() : 'OPPONENT TURN — '+turn.toUpperCase());
+  checkWinner();
+}
+
+function attachOnlineConnection(conn){
+  onlineConnection=conn;
+  conn.on('open',()=>{
+    gameMode='online';
+    aiThinking=false;
+    document.getElementById('gameMode').textContent='Online Multiplayer';
+    onlineStatus('ONLINE • ROOM '+onlineRoomCode);
+    document.getElementById('status').textContent=
+      turn===onlineColor ? 'YOUR TURN — '+turn.toUpperCase() : 'OPPONENT TURN — '+turn.toUpperCase();
+    if(onlineColor==='red') sendOnlineState();
+  });
+  conn.on('data',applyOnlineState);
+  conn.on('close',()=>{
+    onlineStatus('ONLINE PLAYER DISCONNECTED');
+    document.getElementById('status').textContent='Opponent disconnected';
+  });
+  conn.on('error',()=>onlineStatus('ONLINE CONNECTION ERROR'));
+}
+
+function createOnlinePeer(id){
+  return new Peer(id,{debug:0});
+}
+
+document.getElementById('hostOnline').addEventListener('click',()=>{
+  if(onlinePeer) onlinePeer.destroy();
+  onlineRoomCode=Math.random().toString(36).slice(2,8).toUpperCase();
+  onlineColor='red';
+  onlineStatus('CREATING ONLINE ROOM…');
+  onlinePeer=createOnlinePeer('bradley-checkers-'+onlineRoomCode.toLowerCase());
+  onlinePeer.on('open',()=>{
+    gameMode='online';
+    turn='red'; selected=null; forcedPiece=null; gameOver=false; leaderboardResultReported=false;
+    redCaptured=0; blackCaptured=0; resetState(); createBoard(); updateScore();
+    onlineStatus('ROOM '+onlineRoomCode+' • SHARE CODE');
+    document.getElementById('status').textContent='Waiting for Black player…';
+  });
+  onlinePeer.on('connection',conn=>attachOnlineConnection(conn));
+  onlinePeer.on('error',()=>onlineStatus('ROOM ERROR — TRY AGAIN'));
+});
+
+document.getElementById('joinOnline').addEventListener('click',()=>{
+  const code=(prompt('Enter Bradley Checkers room code:')||'').trim().toUpperCase();
+  if(!code) return;
+  if(onlinePeer) onlinePeer.destroy();
+  onlineRoomCode=code;
+  onlineColor='black';
+  onlineStatus('JOINING ROOM '+code+'…');
+  onlinePeer=createOnlinePeer();
+  onlinePeer.on('open',()=>{
+    attachOnlineConnection(
+      onlinePeer.connect('bradley-checkers-'+code.toLowerCase(),{reliable:true})
+    );
+  });
+  onlinePeer.on('error',()=>onlineStatus('ROOM NOT FOUND / CONNECTION ERROR'));
+});
 
 /* Spatial-style game audio generated locally with Web Audio. */
 let audioCtx=null;
@@ -1638,6 +1971,14 @@ function checkWinner(){
     ).textContent=
       winner+' Wins! 🏆';
 
+    /* One cumulative database update per completed game, never a duplicate player row. */
+    if(gameMode==='ai'){
+      reportLeaderboardResult(winner==='Red' ? 'win' : 'loss');
+    } else if(gameMode==='online' && onlineColor){
+      const myWinner=onlineColor==='red' ? 'Red' : 'Black';
+      reportLeaderboardResult(winner===myWinner ? 'win' : 'loss');
+    }
+
   }
 }
 
@@ -1818,6 +2159,7 @@ function attemptMove(r,c){
         capitalize(turn)+
         ': Continue Jump';
 
+      sendOnlineState();
       return;
     }
   }
@@ -1852,6 +2194,7 @@ function attemptMove(r,c){
     capitalize(turn)+"'s Turn";
 
   checkWinner();
+  sendOnlineState();
 
   if(
     !gameOver &&
@@ -2265,6 +2608,12 @@ function handleObject(obj){
     turn==='black'
   ) return;
 
+  /* In an online match, each device can move only its assigned color. */
+  if(
+    gameMode==='online' &&
+    (!onlineConnection || !onlineConnection.open || turn!==onlineColor)
+  ) return;
+
   const data=obj.userData;
 
   if(data.type==='piece'){
@@ -2487,6 +2836,60 @@ function controller(index){
 controller(0);
 controller(1);
 
+/* QUEST LOCOMOTION: left stick moves relative to headset; right stick snap-turns. */
+let snapReady=true;
+const moveSpeed=1.65;
+const snapAngle=THREE.MathUtils.degToRad(30);
+const vrClock=new THREE.Clock();
+
+function updateVRLocomotion(){
+  if(!renderer.xr.isPresenting) return;
+
+  const session=renderer.xr.getSession();
+  if(!session) return;
+
+  let leftSource=null;
+  let rightSource=null;
+  for(const source of session.inputSources){
+    if(!source.gamepad) continue;
+    if(source.handedness==='left') leftSource=source;
+    if(source.handedness==='right') rightSource=source;
+  }
+
+  const dt=Math.min(vrClock.getDelta(),.05);
+
+  if(leftSource){
+    const axes=leftSource.gamepad.axes;
+    const x=axes.length>=4 ? axes[2] : axes[0];
+    const y=axes.length>=4 ? axes[3] : axes[1];
+
+    if(Math.abs(x)>.16 || Math.abs(y)>.16){
+      const xrCamera=renderer.xr.getCamera(camera);
+      const forward=new THREE.Vector3(0,0,-1).applyQuaternion(xrCamera.quaternion);
+      forward.y=0;
+      forward.normalize();
+      const right=new THREE.Vector3(1,0,0).applyQuaternion(xrCamera.quaternion);
+      right.y=0;
+      right.normalize();
+
+      playerRig.position.addScaledVector(right,x*moveSpeed*dt);
+      playerRig.position.addScaledVector(forward,-y*moveSpeed*dt);
+    }
+  }
+
+  if(rightSource){
+    const axes=rightSource.gamepad.axes;
+    const turnX=axes.length>=4 ? axes[2] : axes[0];
+
+    if(Math.abs(turnX)>.72 && snapReady){
+      playerRig.rotation.y-=Math.sign(turnX)*snapAngle;
+      snapReady=false;
+      pulseHaptics();
+    }
+    if(Math.abs(turnX)<.25) snapReady=true;
+  }
+}
+
 
 /* RESET */
 
@@ -2499,7 +2902,7 @@ document
     turn='red';
     selected=null;
     forcedPiece=null;
-    gameOver=false;
+    gameOver=false; leaderboardResultReported=false;
     redCaptured=0;
     blackCaptured=0;
 
@@ -2668,6 +3071,8 @@ window.addEventListener(
 
 renderer.setAnimationLoop(
   ()=>{
+
+    updateVRLocomotion();
 
     renderer.render(
       scene,
