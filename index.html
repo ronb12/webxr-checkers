@@ -671,23 +671,8 @@ for(const x of [-2.18,2.18]){
   roomGroup.add(trophyBase);
 }
 
-/* Table pedestal beneath wall-board area gives the scene physical weight */
-const tablePedestal=new THREE.Mesh(
-  new THREE.CylinderGeometry(.48,.62,.72,32),
-  marbleMat
-);
-tablePedestal.position.set(0,.36,.18);
-tablePedestal.castShadow=true;
-tablePedestal.receiveShadow=true;
-roomGroup.add(tablePedestal);
-
-const tableAccent=new THREE.Mesh(
-  new THREE.TorusGeometry(.53,.025,12,48),
-  brassMat
-);
-tableAccent.rotation.x=Math.PI/2;
-tableAccent.position.set(0,.69,.18);
-roomGroup.add(tableAccent);
+/* Keep the lower front of the wall-mounted board completely clear in VR.
+   The former center pedestal overlapped the player's view of the bottom squares. */
 
 const spectatorRailMat=new THREE.MeshStandardMaterial({
   color:0x202024,
