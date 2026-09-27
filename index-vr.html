@@ -972,7 +972,12 @@ leaderboardCanvas.width=768; leaderboardCanvas.height=1024;
 const leaderboardTexture=new THREE.CanvasTexture(leaderboardCanvas);
 const leaderboardPanel=new THREE.Mesh(
   new THREE.PlaneGeometry(1.18,1.58),
-  new THREE.MeshPhysicalMaterial({map:leaderboardTexture,roughness:.24,clearcoat:.7})
+  /* Matte/unlit display prevents the nearby wall sconces from washing out the text. */
+  new THREE.MeshBasicMaterial({
+    map:leaderboardTexture,
+    toneMapped:false,
+    side:THREE.DoubleSide
+  })
 );
 leaderboardPanel.position.set(2.925,1.72,1.30);
 leaderboardPanel.rotation.y=-Math.PI/2;
