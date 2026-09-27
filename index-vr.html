@@ -2989,14 +2989,22 @@ function updateVRLocomotion(){
     const y=axes.length>=4 ? axes[3] : axes[1];
 
     if(Math.abs(x)>.16 || Math.abs(y)>.16){
+      /* Quest locomotion must follow the headset's WORLD direction.
+         xrCamera.quaternion can be local to playerRig after snap-turning,
+         which makes movement feel reversed/rotated. getWorldQuaternion keeps
+         forward = where the player is looking and right = headset right. */
       const xrCamera=renderer.xr.getCamera(camera);
-      const forward=new THREE.Vector3(0,0,-1).applyQuaternion(xrCamera.quaternion);
+      const headWorldQ=new THREE.Quaternion();
+      xrCamera.getWorldQuaternion(headWorldQ);
+
+      const forward=new THREE.Vector3(0,0,-1).applyQuaternion(headWorldQ);
       forward.y=0;
       forward.normalize();
-      const right=new THREE.Vector3(1,0,0).applyQuaternion(xrCamera.quaternion);
-      right.y=0;
-      right.normalize();
 
+      /* Derive right from forward on the floor plane so left/right cannot flip. */
+      const right=new THREE.Vector3(-forward.z,0,forward.x).normalize();
+
+      /* WebXR thumbstick Y is negative when pushed forward. */
       playerRig.position.addScaledVector(right,x*moveSpeed*dt);
       playerRig.position.addScaledVector(forward,-y*moveSpeed*dt);
     }
