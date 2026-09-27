@@ -2279,11 +2279,6 @@ function attemptMove(r,c){
 
   if(becameKing){
 
-    kingCelebration(
-      r,
-      c
-    );
-
     document.getElementById(
       'status'
     ).textContent=
@@ -2317,6 +2312,13 @@ function attemptMove(r,c){
 
   createBoard();
   updateScore();
+
+  /* Run promotion effects AFTER createBoard().
+     createBoard clears the board group, so starting the animation before
+     rebuilding made the KING celebration disappear immediately. */
+  if(becameKing){
+    kingCelebration(r,c);
+  }
 
   document.getElementById(
     'status'
