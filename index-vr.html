@@ -700,6 +700,100 @@ for(const x of [-1.95,1.95]){
 }
 
 
+/* CHAMPIONSHIP BRANDING */
+
+function makeSignTexture(text,subtext){
+  const canvas=document.createElement('canvas');
+  canvas.width=1024;
+  canvas.height=256;
+  const ctx=canvas.getContext('2d');
+  const g=ctx.createLinearGradient(0,0,1024,256);
+  g.addColorStop(0,'#090909');
+  g.addColorStop(.5,'#18130a');
+  g.addColorStop(1,'#090909');
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,1024,256);
+  ctx.strokeStyle='#c9a227';
+  ctx.lineWidth=10;
+  ctx.strokeRect(12,12,1000,232);
+  ctx.textAlign='center';
+  ctx.fillStyle='#ffd95a';
+  ctx.font='900 74px Arial';
+  ctx.fillText(text,512,112);
+  ctx.fillStyle='#b9b9b9';
+  ctx.font='700 28px Arial';
+  ctx.letterSpacing='8px';
+  ctx.fillText(subtext,512,174);
+  return new THREE.CanvasTexture(canvas);
+}
+
+const brandSign=new THREE.Mesh(
+  new THREE.PlaneGeometry(2.45,.61),
+  new THREE.MeshPhysicalMaterial({
+    map:makeSignTexture('BRADLEY CHECKERS','CHAMPIONSHIP LOUNGE'),
+    emissive:0x5a430b,
+    emissiveIntensity:.22,
+    roughness:.28,
+    clearcoat:.65
+  })
+);
+brandSign.position.set(0,2.67,-.115);
+roomGroup.add(brandSign);
+
+/* Creator / ownership plaque */
+const creatorCanvas=document.createElement('canvas');
+creatorCanvas.width=1024;
+creatorCanvas.height=256;
+const creatorCtx=creatorCanvas.getContext('2d');
+creatorCtx.fillStyle='#0b0b0c';
+creatorCtx.fillRect(0,0,1024,256);
+creatorCtx.strokeStyle='#c9a227';
+creatorCtx.lineWidth=10;
+creatorCtx.strokeRect(12,12,1000,232);
+creatorCtx.textAlign='center';
+creatorCtx.fillStyle='#ffd95a';
+creatorCtx.font='bold 48px Arial';
+creatorCtx.fillText('CREATED BY RONELL BRADLEY',512,96);
+creatorCtx.fillStyle='#eeeeee';
+creatorCtx.font='bold 31px Arial';
+creatorCtx.fillText('PROPERTY OF BRADLEY VIRTUAL SOLUTIONS, LLC',512,164);
+
+const creatorPlaque=new THREE.Mesh(
+  new THREE.PlaneGeometry(1.85,.46),
+  new THREE.MeshPhysicalMaterial({
+    map:new THREE.CanvasTexture(creatorCanvas),
+    roughness:.25,
+    clearcoat:.65,
+    clearcoatRoughness:.18
+  })
+);
+creatorPlaque.position.set(0,2.13,-.108);
+roomGroup.add(creatorPlaque);
+
+/* Glass trophy cases */
+for(const x of [-2.35,2.35]){
+  const caseBody=new THREE.Mesh(
+    new THREE.BoxGeometry(.66,1.25,.42),
+    new THREE.MeshPhysicalMaterial({
+      color:0x9cc8d8,
+      transparent:true,
+      opacity:.13,
+      roughness:.08,
+      metalness:.05,
+      transmission:.55
+    })
+  );
+  caseBody.position.set(x,1.55,.12);
+  roomGroup.add(caseBody);
+
+  const caseBase=new THREE.Mesh(
+    new THREE.BoxGeometry(.76,.12,.52),
+    marbleMat
+  );
+  caseBase.position.set(x,.90,.12);
+  roomGroup.add(caseBase);
+}
+
 /* GAME */
 
 const board=new THREE.Group();
@@ -722,6 +816,37 @@ let gameOver=false;
 let gameMode='ai';
 let aiDifficulty='medium';
 let aiThinking=false;
+
+/* Spatial-style game audio generated locally with Web Audio. */
+let audioCtx=null;
+function ensureAudio(){
+  if(!audioCtx){
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  }
+  if(audioCtx.state==='suspended') audioCtx.resume();
+}
+function gameTone(freq=220,duration=.08,gain=.035,type='sine'){
+  ensureAudio();
+  const osc=audioCtx.createOscillator();
+  const amp=audioCtx.createGain();
+  osc.type=type;
+  osc.frequency.setValueAtTime(freq,audioCtx.currentTime);
+  amp.gain.setValueAtTime(gain,audioCtx.currentTime);
+  amp.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+duration);
+  osc.connect(amp).connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime+duration);
+}
+function moveSound(){ gameTone(165,.055,.025,'triangle'); }
+function captureSound(){
+  gameTone(110,.12,.045,'square');
+  setTimeout(()=>gameTone(82,.10,.03,'triangle'),55);
+}
+function kingSound(){
+  [330,440,554,660].forEach((f,i)=>
+    setTimeout(()=>gameTone(f,.22,.035,'sine'),i*85)
+  );
+}
 
 const raycaster=new THREE.Raycaster();
 const tempMatrix=new THREE.Matrix4();
@@ -868,6 +993,8 @@ function createBoard(){
 ========================================= */
 
 function kingCelebration(row,col){
+
+  kingSound();
 
   const center=squarePosition(row,col);
   center.z=.12;
@@ -1606,6 +1733,8 @@ function attemptMove(r,c){
   state[r][c]=piece;
   state[sr][sc]=null;
 
+  moveSound();
+
   if(move.capture){
 
     state[
@@ -1615,6 +1744,7 @@ function attemptMove(r,c){
     ]=null;
 
     pulseHaptics();
+    captureSound();
   }
 
   /* KING PROMOTION */
@@ -2205,7 +2335,11 @@ function handleObject(obj){
 
       selectedPieceMesh=obj;
 
-      obj.scale.set(1.18,1.18,1.18);
+      /* Physical pickup feedback: selected checker lifts toward the player. */
+      obj.scale.set(1.12,1.12,1.12);
+      obj.position.z+=.035;
+      pulseHaptics();
+      gameTone(245,.045,.018,'sine');
 
       if(obj.material){
 
