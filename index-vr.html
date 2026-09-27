@@ -1027,8 +1027,8 @@ const howToLines=[
   ['','and pull the controller trigger.'],
   ['2. MOVE DIAGONALLY','Move one square diagonally forward.'],
   ['3. CAPTURE','Jump over an opponent into an empty'],
-  ['','square. Captures are required when available.'],
-  ['4. MULTI-JUMP','Keep jumping when another capture is open.'],
+  ['','square when you choose to capture.'],
+  ['4. YOUR CHOICE','Choose any highlighted legal move.'],
   ['5. BECOME A KING','Reach the opposite end of the board.'],
   ['','Kings can move and capture both directions.'],
   ['6. WIN','Capture all opponent pieces or leave'],
@@ -1968,10 +1968,10 @@ function legalMovesFor(r,c){
   if(!piece || piece.color!==turn)
     return [];
 
+  /* Player-choice rules: any piece may make any legal diagonal move.
+     A capture is available as a choice, but the game does not force the
+     player to abandon the move they selected just because another capture exists. */
   const captures=capturesFor(r,c);
-
-  if(playerHasCapture(turn))
-    return captures;
 
   return [
     ...captures,
@@ -2256,44 +2256,8 @@ function attemptMove(r,c){
 
   }
 
-  /*
-  MULTI-JUMP:
-  after a capture, the same piece
-  must continue if another capture exists.
-  */
-
-  if(move.capture){
-
-    const more=
-      capturesFor(r,c);
-
-    if(more.length){
-
-      selected={
-        row:r,
-        col:c
-      };
-
-      forcedPiece={
-        row:r,
-        col:c
-      };
-
-      createBoard();
-      highlightMoves(r,c);
-      updateScore();
-
-      document.getElementById(
-        'status'
-      ).textContent=
-        capitalize(turn)+
-        ': Continue Jump';
-
-      sendOnlineState();
-      return;
-    }
-  }
-
+  /* A capture completes the player's chosen move.
+     Additional jumps are available on a later turn instead of being forced. */
   forcedPiece=null;
   selected=null;
 
@@ -2764,23 +2728,6 @@ function handleObject(obj){
           forcedPiece.col!==data.col
         )
       ) return;
-
-      if(
-        playerHasCapture(turn) &&
-        capturesFor(
-          data.row,
-          data.col
-        ).length===0
-      ){
-
-        document.getElementById(
-          'status'
-        ).textContent=
-          capitalize(turn)+
-          ': Capture Required';
-
-        return;
-      }
 
       if(selectedPieceMesh){
 
