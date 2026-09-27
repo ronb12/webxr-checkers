@@ -680,15 +680,16 @@ const spectatorRailMat=new THREE.MeshStandardMaterial({
   roughness:.32
 });
 
-for(const x of [-2.25,2.25]){
+/* Spectator rails sit inside the walkway, clear of the outer seating. */
+for(const x of [-1.95,1.95]){
   const rail=new THREE.Mesh(
-    new THREE.BoxGeometry(.055,.055,2.8),
+    new THREE.BoxGeometry(.055,.055,3.35),
     spectatorRailMat
   );
-  rail.position.set(x,.82,2.85);
+  rail.position.set(x,.82,3.0);
   roomGroup.add(rail);
 
-  for(const z of [1.55,2.45,3.35,4.15]){
+  for(const z of [1.45,2.45,3.55,4.55]){
     const post=new THREE.Mesh(
       new THREE.BoxGeometry(.055,.78,.055),
       spectatorRailMat
