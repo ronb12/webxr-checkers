@@ -16,27 +16,93 @@ html,body{
 }
 #hud{
   position:absolute;
-  top:18px;
+  top:12px;
   left:50%;
   transform:translateX(-50%);
   z-index:10;
+  width:min(520px,92vw);
   color:white;
   text-align:center;
-  background:rgba(0,0,0,.72);
-  padding:12px 20px;
+  background:linear-gradient(180deg,rgba(18,18,18,.96),rgba(3,3,3,.90));
+  padding:10px 14px 9px;
   border:1px solid #c9a227;
-  border-radius:12px;
+  border-radius:14px;
+  box-shadow:0 10px 32px rgba(0,0,0,.5),inset 0 0 18px rgba(201,162,39,.08);
   pointer-events:none;
+  box-sizing:border-box;
 }
 #title{
   color:#ffd95a;
-  font-weight:bold;
-  font-size:20px;
+  font-weight:900;
+  font-size:18px;
+  letter-spacing:1.4px;
+}
+#matchLabel{
+  margin-top:1px;
+  color:#9e9e9e;
+  font-size:9px;
+  letter-spacing:2.4px;
+}
+#players{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:10px;
+  margin-top:7px;
+}
+.playerPanel{
+  display:grid;
+  grid-template-columns:auto 34px;
+  grid-template-rows:auto auto;
+  align-items:center;
+  column-gap:9px;
+  padding:6px 10px;
+  border-radius:9px;
+  background:rgba(255,255,255,.035);
+}
+.redPanel{border:1px solid rgba(217,31,38,.65)}
+.blackPanel{border:1px solid rgba(220,220,220,.32)}
+.playerName{
+  text-align:left;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:1.6px;
+}
+.playerScore{
+  grid-row:1 / 3;
+  grid-column:2;
+  font-size:26px;
+  line-height:1;
+  font-weight:900;
+}
+.redPanel .playerScore{color:#ff4048}
+.blackPanel .playerScore{color:#f2f2f2}
+.playerStats{
+  display:flex;
+  gap:9px;
+  margin-top:3px;
+  color:#8f8f8f;
+  font-size:8px;
+  white-space:nowrap;
+}
+.playerStats b{color:#ffd95a}
+.vs{
+  color:#ffd95a;
+  font-size:10px;
+  font-weight:900;
 }
 #status{
-  margin-top:5px;
-  font-size:15px;
+  display:inline-block;
+  margin-top:7px;
+  padding:3px 12px;
+  border-radius:999px;
+  background:rgba(201,162,39,.10);
+  color:#fff1ae;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.8px;
 }
+
 #controls{
   position:absolute;
   bottom:18px;
@@ -70,11 +136,35 @@ button:hover{background:#292929}
 <body>
 
 <div id="hud">
-  <div id="title">BRADLEY WEBXR CHECKERS</div>
-  <div id="status">Red's Turn</div>
-<div id="score" style="margin-top:4px;font-size:13px;color:#ffd95a">
-Red: 12 &nbsp; | &nbsp; Black: 12
-</div>
+  <div id="title">BRADLEY CHECKERS</div>
+
+  <div id="matchLabel">VR MATCH</div>
+
+  <div id="players">
+
+    <div class="playerPanel redPanel">
+      <div class="playerName">RED</div>
+      <div id="redScore" class="playerScore">12</div>
+      <div class="playerStats">
+        <span>CAPTURES <b id="redCaptures">0</b></span>
+        <span>KINGS <b id="redKings">0</b></span>
+      </div>
+    </div>
+
+    <div class="vs">VS</div>
+
+    <div class="playerPanel blackPanel">
+      <div class="playerName">BLACK</div>
+      <div id="blackScore" class="playerScore">12</div>
+      <div class="playerStats">
+        <span>CAPTURES <b id="blackCaptures">0</b></span>
+        <span>KINGS <b id="blackKings">0</b></span>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="status">RED'S TURN</div>
 </div>
 
 <div id="controls">
@@ -99,7 +189,24 @@ const camera=new THREE.PerspectiveCamera(
   100
 );
 
-camera.position.set(0,1.6,2.7);
+/*
+PLAYER RIG
+
+The Quest controls the camera's head movement.
+The rig controls where the player stands in the world.
+
+Board = Z 0
+Player rig = Z +3.5
+*/
+
+camera.position.set(0,2.9,5.8);
+camera.lookAt(0,0.85,0);
+
+const playerRig=new THREE.Group();
+playerRig.position.set(0,0,3.5);
+
+playerRig.add(camera);
+scene.add(playerRig);
 
 const renderer=new THREE.WebGLRenderer({
   antialias:true
@@ -109,6 +216,75 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);
 renderer.xr.enabled=true;
 renderer.shadowMap.enabled=true;
+
+/* DESKTOP CAMERA / QUEST CAMERA */
+
+function updateDesktopCamera(){
+
+  if(renderer.xr.isPresenting)
+    return;
+
+  /* Desktop view must not inherit
+     the VR player's 3.5m offset. */
+
+  playerRig.position.set(
+    0,
+    0,
+    0
+  );
+
+  camera.position.set(
+    0,
+    2.9,
+    5.8
+  );
+
+  camera.lookAt(
+    0,
+    0.85,
+    0
+  );
+
+}
+
+updateDesktopCamera();
+
+/* Restore the VR player distance when entering VR. */
+
+renderer.xr.addEventListener(
+  'sessionstart',
+  ()=>{
+    playerRig.position.set(
+      0,
+      0,
+      3.5
+    );
+  }
+);
+
+renderer.xr.addEventListener(
+  'sessionend',
+  ()=>{
+    updateDesktopCamera();
+  }
+);
+
+window.addEventListener(
+  'resize',
+  ()=>{
+    camera.aspect=
+      innerWidth/innerHeight;
+
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(
+      innerWidth,
+      innerHeight
+    );
+
+    updateDesktopCamera();
+  }
+);
 
 document.body.appendChild(renderer.domElement);
 document.body.appendChild(VRButton.createButton(renderer));
@@ -166,19 +342,391 @@ wall.position.set(0,1.7,-.28);
 wall.receiveShadow=true;
 scene.add(wall);
 
+/* PREMIUM CHECKERS LOUNGE */
+
+const roomGroup=new THREE.Group();
+scene.add(roomGroup);
+
+const backPanel=new THREE.Mesh(
+  new THREE.BoxGeometry(3.35,2.55,.10),
+  new THREE.MeshStandardMaterial({
+    color:0x101010,
+    roughness:.42,
+    metalness:.18
+  })
+);
+backPanel.position.set(0,1.65,-.20);
+roomGroup.add(backPanel);
+
+const trimMat=new THREE.MeshStandardMaterial({
+  color:0xc9a227,
+  metalness:.88,
+  roughness:.20
+});
+
+for(const x of [-1.70,1.70]){
+  const trim=new THREE.Mesh(
+    new THREE.BoxGeometry(.035,2.62,.055),
+    trimMat
+  );
+  trim.position.set(x,1.65,-.12);
+  roomGroup.add(trim);
+}
+
+const topTrim=new THREE.Mesh(
+  new THREE.BoxGeometry(3.43,.035,.055),
+  trimMat
+);
+topTrim.position.set(0,2.96,-.12);
+roomGroup.add(topTrim);
+
+const stage=new THREE.Mesh(
+  new THREE.CylinderGeometry(1.55,1.70,.16,48),
+  new THREE.MeshStandardMaterial({
+    color:0x111111,
+    roughness:.30,
+    metalness:.35
+  })
+);
+stage.position.set(0,.08,.12);
+stage.receiveShadow=true;
+roomGroup.add(stage);
+
+const stageRing=new THREE.Mesh(
+  new THREE.TorusGeometry(1.60,.025,12,64),
+  trimMat
+);
+stageRing.rotation.x=Math.PI/2;
+stageRing.position.set(0,.17,.12);
+roomGroup.add(stageRing);
+
+for(const x of [-2.15,2.15]){
+  const column=new THREE.Mesh(
+    new THREE.CylinderGeometry(.08,.10,2.55,24),
+    new THREE.MeshStandardMaterial({
+      color:0x151515,
+      metalness:.35,
+      roughness:.28
+    })
+  );
+  column.position.set(x,1.28,-.08);
+  roomGroup.add(column);
+
+  const lamp=new THREE.PointLight(
+    0xffc83d,
+    3.0,
+    3.6
+  );
+  lamp.position.set(x,2.35,.55);
+  roomGroup.add(lamp);
+}
+
+const boardGlow=new THREE.PointLight(
+  0xffdf7a,
+  3.2,
+  3.8
+);
+boardGlow.position.set(0,2.25,1.15);
+roomGroup.add(boardGlow);
+
+/* IMMERSIVE VR ROOM DETAILS */
+
+const sideWallMat=new THREE.MeshStandardMaterial({
+  color:0x0d0d0f,
+  roughness:.58,
+  metalness:.10
+});
+
+for(const x of [-3.0,3.0]){
+  const sideWall=new THREE.Mesh(
+    new THREE.BoxGeometry(.12,3.5,6.2),
+    sideWallMat
+  );
+  sideWall.position.set(x,1.75,2.65);
+  sideWall.receiveShadow=true;
+  roomGroup.add(sideWall);
+}
+
+const ceiling=new THREE.Mesh(
+  new THREE.BoxGeometry(6.1,.10,6.2),
+  new THREE.MeshStandardMaterial({
+    color:0x090909,
+    roughness:.62
+  })
+);
+ceiling.position.set(0,3.48,2.65);
+roomGroup.add(ceiling);
+
+const floorInset=new THREE.Mesh(
+  new THREE.PlaneGeometry(5.4,5.6),
+  new THREE.MeshStandardMaterial({
+    color:0x111114,
+    roughness:.32,
+    metalness:.22
+  })
+);
+floorInset.rotation.x=-Math.PI/2;
+floorInset.position.set(0,.012,2.4);
+floorInset.receiveShadow=true;
+roomGroup.add(floorInset);
+
+for(const x of [-2.72,2.72]){
+  const floorTrim=new THREE.Mesh(
+    new THREE.BoxGeometry(.025,.018,5.4),
+    trimMat
+  );
+  floorTrim.position.set(x,.025,2.35);
+  roomGroup.add(floorTrim);
+}
+
+for(const x of [-2.92,2.92]){
+  for(const z of [.5,2.1,3.7,5.3]){
+    const sconceBase=new THREE.Mesh(
+      new THREE.BoxGeometry(.08,.32,.22),
+      new THREE.MeshStandardMaterial({
+        color:0x151515,
+        metalness:.65,
+        roughness:.25
+      })
+    );
+    sconceBase.position.set(x,2.05,z);
+    roomGroup.add(sconceBase);
+
+    const sconceLight=new THREE.PointLight(
+      0xffb84d,
+      1.15,
+      2.2
+    );
+    sconceLight.position.set(x*.94,2.08,z);
+    roomGroup.add(sconceLight);
+  }
+}
+
+for(const z of [.55,2.05,3.55,5.05]){
+  const beam=new THREE.Mesh(
+    new THREE.BoxGeometry(5.65,.035,.055),
+    trimMat
+  );
+  beam.position.set(0,3.38,z);
+  roomGroup.add(beam);
+}
+
+const centerLight=new THREE.PointLight(
+  0xffe3a1,
+  2.6,
+  4.8
+);
+centerLight.position.set(0,3.20,1.15);
+roomGroup.add(centerLight);
+
+const redAccent=new THREE.PointLight(
+  0xaa1018,
+  1.35,
+  3.0
+);
+redAccent.position.set(-2.15,1.15,1.25);
+roomGroup.add(redAccent);
+
+const goldAccent=new THREE.PointLight(
+  0xffc83d,
+  1.5,
+  3.0
+);
+goldAccent.position.set(2.15,1.15,1.25);
+roomGroup.add(goldAccent);
+
+/* REALISM PASS: layered materials, furniture and architectural depth */
+
+const marbleMat=new THREE.MeshPhysicalMaterial({
+  color:0x161619,
+  roughness:.20,
+  metalness:.12,
+  clearcoat:.75,
+  clearcoatRoughness:.16
+});
+
+const woodMat=new THREE.MeshStandardMaterial({
+  color:0x24140c,
+  roughness:.34,
+  metalness:.08
+});
+
+const leatherMat=new THREE.MeshPhysicalMaterial({
+  color:0x18181b,
+  roughness:.38,
+  metalness:.04,
+  clearcoat:.25,
+  clearcoatRoughness:.35
+});
+
+const brassMat=new THREE.MeshStandardMaterial({
+  color:0xb58a2a,
+  metalness:.92,
+  roughness:.22
+});
+
+/* Marble center runner */
+const marbleRunner=new THREE.Mesh(
+  new THREE.BoxGeometry(2.65,.035,4.8),
+  marbleMat
+);
+marbleRunner.position.set(0,.035,2.55);
+marbleRunner.receiveShadow=true;
+roomGroup.add(marbleRunner);
+
+/* Recessed wall panels */
+for(const x of [-2.35,-1.18,1.18,2.35]){
+  const panel=new THREE.Mesh(
+    new THREE.BoxGeometry(.78,1.65,.035),
+    new THREE.MeshStandardMaterial({
+      color:0x151519,
+      roughness:.46,
+      metalness:.14
+    })
+  );
+  panel.position.set(x,1.72,-.115);
+  roomGroup.add(panel);
+
+  const panelTop=new THREE.Mesh(
+    new THREE.BoxGeometry(.84,.025,.045),
+    brassMat
+  );
+  panelTop.position.set(x,2.56,-.085);
+  roomGroup.add(panelTop);
+
+  const panelBottom=panelTop.clone();
+  panelBottom.position.y=.88;
+  roomGroup.add(panelBottom);
+}
+
+/* Luxury benches along spectator sides */
+for(const x of [-2.48,2.48]){
+  for(const z of [1.55,3.25,4.75]){
+    const seat=new THREE.Mesh(
+      new THREE.BoxGeometry(.72,.18,.78),
+      leatherMat
+    );
+    seat.position.set(x,.48,z);
+    seat.castShadow=true;
+    roomGroup.add(seat);
+
+    const back=new THREE.Mesh(
+      new THREE.BoxGeometry(.72,.70,.16),
+      leatherMat
+    );
+    back.position.set(x + (x<0 ? -.28 : .28),.78,z);
+    back.rotation.y=Math.PI/2;
+    back.castShadow=true;
+    roomGroup.add(back);
+
+    const base=new THREE.Mesh(
+      new THREE.BoxGeometry(.54,.30,.58),
+      woodMat
+    );
+    base.position.set(x,.25,z);
+    roomGroup.add(base);
+  }
+}
+
+/* Brass ceiling fixtures */
+for(const z of [1.0,2.65,4.3]){
+  const fixture=new THREE.Mesh(
+    new THREE.CylinderGeometry(.30,.30,.045,32),
+    brassMat
+  );
+  fixture.position.set(0,3.36,z);
+  roomGroup.add(fixture);
+
+  const glow=new THREE.PointLight(
+    0xffe1a0,
+    1.65,
+    3.0
+  );
+  glow.position.set(0,3.20,z);
+  roomGroup.add(glow);
+}
+
+/* Trophy pedestals */
+for(const x of [-2.18,2.18]){
+  const pedestal=new THREE.Mesh(
+    new THREE.BoxGeometry(.42,.72,.42),
+    marbleMat
+  );
+  pedestal.position.set(x,.36,.48);
+  pedestal.castShadow=true;
+  roomGroup.add(pedestal);
+
+  const trophyCup=new THREE.Mesh(
+    new THREE.CylinderGeometry(.12,.075,.25,24),
+    brassMat
+  );
+  trophyCup.position.set(x,.88,.48);
+  roomGroup.add(trophyCup);
+
+  const trophyBase=new THREE.Mesh(
+    new THREE.BoxGeometry(.24,.08,.20),
+    woodMat
+  );
+  trophyBase.position.set(x,.73,.48);
+  roomGroup.add(trophyBase);
+}
+
+/* Table pedestal beneath wall-board area gives the scene physical weight */
+const tablePedestal=new THREE.Mesh(
+  new THREE.CylinderGeometry(.48,.62,.72,32),
+  marbleMat
+);
+tablePedestal.position.set(0,.36,.18);
+tablePedestal.castShadow=true;
+tablePedestal.receiveShadow=true;
+roomGroup.add(tablePedestal);
+
+const tableAccent=new THREE.Mesh(
+  new THREE.TorusGeometry(.53,.025,12,48),
+  brassMat
+);
+tableAccent.rotation.x=Math.PI/2;
+tableAccent.position.set(0,.69,.18);
+roomGroup.add(tableAccent);
+
+const spectatorRailMat=new THREE.MeshStandardMaterial({
+  color:0x202024,
+  metalness:.55,
+  roughness:.32
+});
+
+for(const x of [-2.25,2.25]){
+  const rail=new THREE.Mesh(
+    new THREE.BoxGeometry(.055,.055,2.8),
+    spectatorRailMat
+  );
+  rail.position.set(x,.82,2.85);
+  roomGroup.add(rail);
+
+  for(const z of [1.55,2.45,3.35,4.15]){
+    const post=new THREE.Mesh(
+      new THREE.BoxGeometry(.055,.78,.055),
+      spectatorRailMat
+    );
+    post.position.set(x,.43,z);
+    roomGroup.add(post);
+  }
+}
+
 
 /* GAME */
 
 const board=new THREE.Group();
 scene.add(board);
 
-const S=.23;
+const S=.285;
 
 let cells=[];
 let pieces=[];
 let state=[];
 let turn='red';
 let selected=null;
+let selectedPieceMesh=null;
 let tableMode=false;
 let redCaptured=0;
 let blackCaptured=0;
@@ -328,6 +876,278 @@ function createBoard(){
 
 }
 
+
+/* =========================================
+   KING PROMOTION CELEBRATION
+========================================= */
+
+function kingCelebration(row,col){
+
+  const center=squarePosition(row,col);
+  center.z=.12;
+
+  /* Strong haptic pulse */
+
+  pulseHaptics();
+
+  setTimeout(
+    ()=>pulseHaptics(),
+    140
+  );
+
+  /* Gold point light */
+
+  const light=new THREE.PointLight(
+    0xffd34d,
+    8,
+    2.5
+  );
+
+  light.position.copy(center);
+  light.position.z=.35;
+
+  board.add(light);
+
+  /* Expanding gold rings */
+
+  const rings=[];
+
+  for(let i=0;i<3;i++){
+
+    const ring=new THREE.Mesh(
+      new THREE.TorusGeometry(
+        .10,
+        .012,
+        12,
+        40
+      ),
+      new THREE.MeshBasicMaterial({
+        color:0xffd34d,
+        transparent:true,
+        opacity:.95
+      })
+    );
+
+    ring.position.copy(center);
+    ring.position.z=.13;
+
+    ring.rotation.x=Math.PI/2;
+
+    ring.userData.delay=i*100;
+
+    board.add(ring);
+    rings.push(ring);
+
+  }
+
+  /* Gold particle burst */
+
+  const particles=[];
+
+  for(let i=0;i<28;i++){
+
+    const particle=new THREE.Mesh(
+      new THREE.SphereGeometry(
+        .012,
+        8,
+        8
+      ),
+      new THREE.MeshBasicMaterial({
+        color:0xffd34d
+      })
+    );
+
+    particle.position.copy(center);
+
+    particle.position.x+=
+      (Math.random()-.5)*.12;
+
+    particle.position.y+=
+      (Math.random()-.5)*.12;
+
+    particle.position.z+=
+      Math.random()*.04;
+
+    particle.userData.velocity={
+      x:(Math.random()-.5)*.004,
+      y:(Math.random()*.006)+.002,
+      z:(Math.random()-.5)*.004
+    };
+
+    board.add(particle);
+    particles.push(particle);
+
+  }
+
+  /* Floating KING text */
+
+  const canvas=document.createElement('canvas');
+
+  canvas.width=512;
+  canvas.height=128;
+
+  const ctx=canvas.getContext('2d');
+
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  ctx.font=
+    'bold 72px Arial';
+
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+
+  ctx.strokeStyle='#000000';
+  ctx.lineWidth=12;
+
+  ctx.strokeText(
+    'KING!',
+    256,
+    64
+  );
+
+  ctx.fillStyle='#ffd34d';
+
+  ctx.fillText(
+    'KING!',
+    256,
+    64
+  );
+
+  const texture=
+    new THREE.CanvasTexture(canvas);
+
+  const textMesh=new THREE.Mesh(
+    new THREE.PlaneGeometry(
+      .65,
+      .16
+    ),
+    new THREE.MeshBasicMaterial({
+      map:texture,
+      transparent:true,
+      depthWrite:false
+    })
+  );
+
+  textMesh.position.copy(center);
+  textMesh.position.y+=.16;
+  textMesh.position.z+=.18;
+
+  board.add(textMesh);
+
+  const start=performance.now();
+  const duration=1300;
+
+  function animate(now){
+
+    const t=Math.min(
+      (now-start)/duration,
+      1
+    );
+
+    const eased=
+      1-Math.pow(1-t,3);
+
+    /* Rings expand */
+
+    rings.forEach((ring,i)=>{
+
+      const local=Math.max(
+        0,
+        Math.min(
+          1,
+          (t*1300-ring.userData.delay)/700
+        )
+      );
+
+      ring.scale.setScalar(
+        1+local*3
+      );
+
+      ring.material.opacity=
+        .95*(1-local);
+
+    });
+
+    /* Particles fly upward */
+
+    particles.forEach(p=>{
+
+      p.position.x+=
+        p.userData.velocity.x;
+
+      p.position.y+=
+        p.userData.velocity.y;
+
+      p.position.z+=
+        p.userData.velocity.z;
+
+      p.material.opacity=
+        1-t;
+
+    });
+
+    /* KING text rises */
+
+    textMesh.position.y=
+      center.y+
+      .16+
+      eased*.45;
+
+    textMesh.material.opacity=
+      1-t;
+
+    /* Light fades */
+
+    light.intensity=
+      8*(1-t);
+
+    if(t<1){
+
+      requestAnimationFrame(
+        animate
+      );
+
+    }else{
+
+      rings.forEach(r=>{
+        board.remove(r);
+        r.geometry.dispose();
+        r.material.dispose();
+      });
+
+      particles.forEach(p=>{
+        board.remove(p);
+        p.geometry.dispose();
+        p.material.dispose();
+      });
+
+      board.remove(light);
+
+      light.dispose?.();
+
+      board.remove(textMesh);
+
+      texture.dispose();
+
+      textMesh.geometry.dispose();
+      textMesh.material.dispose();
+
+    }
+
+  }
+
+  requestAnimationFrame(
+    animate
+  );
+
+}
+
+
 function createPiece(r,c,data){
 
   /*
@@ -347,7 +1167,9 @@ function createPiece(r,c,data){
       metalness:.25,
       roughness:.32,
       clearcoat:.8,
-      clearcoatRoughness:.18
+      clearcoatRoughness:.18,
+      emissive:0x000000,
+      emissiveIntensity:0
     });
 
   const piece=
@@ -585,17 +1407,72 @@ function updateScore(){
 
   let red=0;
   let black=0;
+  let redKings=0;
+  let blackKings=0;
 
-  for(const row of state)
-    for(const piece of row)
-      if(piece){
-        if(piece.color==='red') red++;
-        else black++;
+  for(const row of state){
+
+    for(const piece of row){
+
+      if(!piece)
+        continue;
+
+      if(piece.color==='red'){
+
+        red++;
+
+        if(piece.king)
+          redKings++;
+
+      }else{
+
+        black++;
+
+        if(piece.king)
+          blackKings++;
+
       }
 
-  document.getElementById('score').innerHTML=
-    'Red: '+red+
-    ' &nbsp; | &nbsp; Black: '+black;
+    }
+
+  }
+
+  const redScore=
+    document.getElementById('redScore');
+
+  const blackScore=
+    document.getElementById('blackScore');
+
+  const redCaptures=
+    document.getElementById('redCaptures');
+
+  const blackCaptures=
+    document.getElementById('blackCaptures');
+
+  const redKing=
+    document.getElementById('redKings');
+
+  const blackKing=
+    document.getElementById('blackKings');
+
+  if(redScore)
+    redScore.textContent=red;
+
+  if(blackScore)
+    blackScore.textContent=black;
+
+  if(redCaptures)
+    redCaptures.textContent=12-black;
+
+  if(blackCaptures)
+    blackCaptures.textContent=12-red;
+
+  if(redKing)
+    redKing.textContent=redKings;
+
+  if(blackKing)
+    blackKing.textContent=blackKings;
+
 }
 
 function hasAnyMove(color){
@@ -653,19 +1530,63 @@ function checkWinner(){
 
 function pulseHaptics(){
 
-  for(let i=0;i<2;i++){
+  if(!renderer.xr.isPresenting)
+    return;
+
+  const controllers=[
+    renderer.xr.getController(0),
+    renderer.xr.getController(1)
+  ];
+
+  for(const ctrl of controllers){
 
     const source=
-      renderer.xr
-      .getController(i)
-      .userData
-      .inputSource;
+      ctrl.userData.inputSource;
 
-    const actuator=
-      source?.gamepad?.hapticActuators?.[0];
+    if(!source || !source.gamepad)
+      continue;
 
-    if(actuator)
-      actuator.pulse(.6,70);
+    const gamepad=source.gamepad;
+
+    try{
+
+      if(
+        gamepad.hapticActuators &&
+        gamepad.hapticActuators.length
+      ){
+
+        gamepad.hapticActuators[0].pulse(
+          0.8,
+          120
+        );
+
+      }
+
+      else if(
+        gamepad.vibrationActuator
+      ){
+
+        gamepad.vibrationActuator.playEffect(
+          'dual-rumble',
+          {
+            startDelay:0,
+            duration:120,
+            weakMagnitude:0.8,
+            strongMagnitude:0.8
+          }
+        );
+
+      }
+
+    }catch(error){
+
+      console.log(
+        'Haptic error:',
+        error
+      );
+
+    }
+
   }
 }
 
@@ -712,6 +1633,13 @@ function attemptMove(r,c){
 
   /* KING PROMOTION */
 
+  const becameKing =
+    !piece.king &&
+    (
+      (piece.color==='red' && r===0) ||
+      (piece.color==='black' && r===7)
+    );
+
   if(
     piece.color==='red' &&
     r===0
@@ -724,6 +1652,21 @@ function attemptMove(r,c){
     r===7
   ){
     piece.king=true;
+  }
+
+  if(becameKing){
+
+    kingCelebration(
+      r,
+      c
+    );
+
+    document.getElementById(
+      'status'
+    ).textContent=
+      capitalize(piece.color)+
+      ' crowned KING!';
+
   }
 
   /*
@@ -765,6 +1708,19 @@ function attemptMove(r,c){
 
   forcedPiece=null;
   selected=null;
+
+  if(selectedPieceMesh){
+    selectedPieceMesh.scale.set(1,1,1);
+
+    if(
+      selectedPieceMesh.material &&
+      selectedPieceMesh.material.emissive
+    ){
+      selectedPieceMesh.material.emissive.setHex(0x000000);
+    }
+
+    selectedPieceMesh=null;
+  }
 
   turn=
     turn==='red'
@@ -1231,10 +2187,56 @@ function handleObject(obj){
         return;
       }
 
+      if(selectedPieceMesh){
+
+        selectedPieceMesh.scale.set(1,1,1);
+
+        if(
+          selectedPieceMesh.material &&
+          selectedPieceMesh.material.emissive
+        ){
+          selectedPieceMesh.material.emissive.setHex(0x000000);
+          selectedPieceMesh.material.emissiveIntensity=0;
+        }
+
+        if(
+          selectedPieceMesh.userData.selectionColor !== undefined &&
+          selectedPieceMesh.material &&
+          selectedPieceMesh.material.color
+        ){
+          selectedPieceMesh.material.color.setHex(
+            selectedPieceMesh.userData.selectionColor
+          );
+        }
+
+        selectedPieceMesh=null;
+      }
+
       selected={
         row:data.row,
         col:data.col
       };
+
+      selectedPieceMesh=obj;
+
+      obj.scale.set(1.18,1.18,1.18);
+
+      if(obj.material){
+
+        if(obj.material.emissive){
+          obj.material.emissive.setHex(0xffc400);
+          obj.material.emissiveIntensity=1.4;
+        }
+
+        if(obj.material.color){
+          obj.userData.selectionColor=
+            obj.material.color.getHex();
+
+          obj.material.color.setHex(
+            0xffc400
+          );
+        }
+      }
 
       highlightMoves(
         data.row,
@@ -1301,6 +2303,13 @@ function controller(index){
   const ctrl=
     renderer.xr.getController(index);
 
+  ctrl.addEventListener(
+    'connected',
+    event=>{
+      ctrl.userData.inputSource=event.data;
+    }
+  );
+
   const line=
     new THREE.Line(
       new THREE.BufferGeometry()
@@ -1318,6 +2327,7 @@ function controller(index){
   ctrl.addEventListener(
     'selectstart',
     ()=>{
+      pulseHaptics();
 
       tempMatrix
         .identity()
@@ -1350,7 +2360,7 @@ function controller(index){
     }
   );
 
-  scene.add(ctrl);
+  playerRig.add(ctrl);
 
 }
 
