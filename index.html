@@ -945,7 +945,6 @@ function clubSign(text,sub,x,y,z,ry=0,w=2.9){
   m.position.set(x,y,z); m.rotation.y=ry; clubGroup.add(m); return m;
 }
 clubSign('BRADLEY CHECKERS','CLUB & CHAMPIONSHIP VENUE',0,2.45,17.90,Math.PI,4.25);
-clubSign('CASUAL LOUNGE','PLAY • RELAX • CONNECT',-4.59,2.32,10.3,Math.PI/2,2.5);
 
 /* Lobby reception desk and logo wall. */
 const reception=new THREE.Mesh(new THREE.BoxGeometry(3.25,.92,.72),woodMat);
@@ -1234,14 +1233,14 @@ const invitePanel=new THREE.Mesh(
   new THREE.PlaneGeometry(1.18,1.58),
   new THREE.MeshBasicMaterial({map:inviteTexture,toneMapped:false,side:THREE.DoubleSide})
 );
-invitePanel.position.set(-2.925,1.72,3.72);
+invitePanel.position.set(-2.925,1.72,2.90);
 invitePanel.rotation.y=Math.PI/2;
 roomGroup.add(invitePanel);
 
 let invitePlayers=[];
 let pendingInvite=null;
 const inviteHitTargets=[];
-function makeInviteHit(type,index,y,z=3.72,width=.98){
+function makeInviteHit(type,index,y,z=2.90,width=.98){
   const hit=new THREE.Mesh(
     new THREE.PlaneGeometry(width,.115),
     new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide})
@@ -1253,8 +1252,8 @@ function makeInviteHit(type,index,y,z=3.72,width=.98){
   return hit;
 }
 /* Incoming invite buttons line up with the green/red buttons; player rows line up with their names. */
-makeInviteHit('acceptInvite',0,2.06,3.94,.43);
-makeInviteHit('declineInvite',0,2.06,3.50,.43);
+makeInviteHit('acceptInvite',0,2.06,3.12,.43);
+makeInviteHit('declineInvite',0,2.06,2.68,.43);
 for(let i=0;i<5;i++) makeInviteHit('invitePlayerRow',i,1.79-i*.17);
 
 function drawInvitePanel(){
