@@ -969,8 +969,8 @@ function stationLabel(number){
   const c=document.createElement('canvas'); c.width=512; c.height=128;
   const x=c.getContext('2d'); x.fillStyle='#09090b'; x.fillRect(0,0,512,128);
   x.strokeStyle='#c9a227'; x.lineWidth=8; x.strokeRect(5,5,502,118);
-  x.textAlign='center'; x.fillStyle='#ffd95a'; x.font='bold 34px Arial'; x.fillText(`BOARD ${number}`,256,48);
-  x.fillStyle='#68e49a'; x.font='bold 23px Arial'; x.fillText('AVAILABLE • 0 / 2',256,88);
+  x.textAlign='center'; x.fillStyle='#ffffff'; x.font='900 50px Arial'; x.fillText(`BOARD ${number}`,256,58);
+  x.fillStyle='#68e49a'; x.font='bold 25px Arial'; x.fillText('AVAILABLE • 0 / 2',256,101);
   const t=new THREE.CanvasTexture(c); stationLabelTextures.push(t); return t;
 }
 
@@ -996,10 +996,10 @@ function addWallStation(side,z,number){
     clubGroup.add(piece);
   }
   /* Framed BOARD-number identification panel above every side-wall checkerboard. */
-  const labelFrame=new THREE.Mesh(new THREE.BoxGeometry(.075,.48,1.62),stationFrameMat);
-  labelFrame.position.set(x-side*.105,2.73,z); clubGroup.add(labelFrame);
-  const label=new THREE.Mesh(new THREE.PlaneGeometry(1.46,.38),new THREE.MeshBasicMaterial({map:stationLabel(number),toneMapped:false,side:THREE.FrontSide}));
-  label.position.set(x-side*.155,2.73,z); label.rotation.y=face; clubGroup.add(label);
+  const labelFrame=new THREE.Mesh(new THREE.BoxGeometry(.075,.58,1.82),stationFrameMat);
+  labelFrame.position.set(x-side*.105,2.78,z); clubGroup.add(labelFrame);
+  const label=new THREE.Mesh(new THREE.PlaneGeometry(1.66,.48),new THREE.MeshBasicMaterial({map:stationLabel(number),toneMapped:false,side:THREE.FrontSide}));
+  label.position.set(x-side*.205,2.78,z); label.rotation.y=face; clubGroup.add(label);
   const lightBar=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.10,12),stationFrameMat);
   lightBar.rotation.x=Math.PI/2; lightBar.position.set(x-side*.20,2.98,z); clubGroup.add(lightBar);
   const ready=new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),stationGreenMat);
@@ -1458,7 +1458,7 @@ function applySocialPose(msg){
 function updateStationLabels(){
   for(let i=0;i<6;i++){
     const c=stationLabelTextures[i]?.image;if(!c)continue;const x=c.getContext('2d'), st=stationStatus[i];
-    x.fillStyle='#09090b';x.fillRect(0,0,512,128);x.strokeStyle='#c9a227';x.lineWidth=8;x.strokeRect(5,5,502,118);x.textAlign='center';x.fillStyle='#ffd95a';x.font='bold 34px Arial';x.fillText(`BOARD ${i+1}`,256,48);x.fillStyle=st.players>=2?'#ff7777':'#68e49a';x.font='bold 23px Arial';x.fillText(st.players>=2?'IN MATCH • 2 / 2':`AVAILABLE • ${st.players} / 2`,256,88);stationLabelTextures[i].needsUpdate=true;
+    x.fillStyle='#09090b';x.fillRect(0,0,512,128);x.strokeStyle='#c9a227';x.lineWidth=8;x.strokeRect(5,5,502,118);x.textAlign='center';x.fillStyle='#ffffff';x.font='900 50px Arial';x.fillText(`BOARD ${i+1}`,256,58);x.fillStyle=st.players>=2?'#ff7777':'#68e49a';x.font='bold 25px Arial';x.fillText(st.players>=2?'IN MATCH • 2 / 2':`AVAILABLE • ${st.players} / 2`,256,101);stationLabelTextures[i].needsUpdate=true;
   }
 }
 function socialRoster(){
