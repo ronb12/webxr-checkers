@@ -326,7 +326,7 @@ camera.position.set(0,2.9,5.8);
 camera.lookAt(0,0.85,0);
 
 const playerRig=new THREE.Group();
-playerRig.position.set(0,0,3.5);
+playerRig.position.set(0,0,6.45);
 
 playerRig.add(camera);
 scene.add(playerRig);
@@ -380,8 +380,10 @@ renderer.xr.addEventListener(
     playerRig.position.set(
       0,
       0,
-      3.5
+      6.45
     );
+    /* Face into the lounge from the spawn point. */
+    playerRig.rotation.y=Math.PI;
   }
 );
 
@@ -946,6 +948,19 @@ function clubSign(text,sub,x,y,z,ry=0,w=2.9){
 }
 clubSign('BRADLEY CHECKERS','CLUB & CHAMPIONSHIP VENUE',0,2.45,17.90,Math.PI,4.25);
 
+
+/* Traditional tournament scoring panel: Win 2, Draw 1, Loss 0. */
+const pointsCanvas=document.createElement('canvas'); pointsCanvas.width=768; pointsCanvas.height=512;
+const pointsCtx=pointsCanvas.getContext('2d');
+pointsCtx.fillStyle='#09090b'; pointsCtx.fillRect(0,0,768,512);
+pointsCtx.strokeStyle='#c9a227'; pointsCtx.lineWidth=14; pointsCtx.strokeRect(10,10,748,492);
+pointsCtx.textAlign='center'; pointsCtx.fillStyle='#ffd95a'; pointsCtx.font='900 48px Arial'; pointsCtx.fillText('LEADERBOARD POINTS',384,78);
+pointsCtx.fillStyle='#ffffff'; pointsCtx.font='bold 42px Arial';
+pointsCtx.fillText('WIN  =  2 POINTS',384,174); pointsCtx.fillText('DRAW  =  1 POINT',384,252); pointsCtx.fillText('LOSS  =  0 POINTS',384,330);
+pointsCtx.fillStyle='#d6d6d6'; pointsCtx.font='26px Arial'; pointsCtx.fillText('Points from completed matches count',384,408); pointsCtx.fillText('toward the Bradley Checkers leaderboard.',384,446);
+const pointsPanel=new THREE.Mesh(new THREE.PlaneGeometry(2.45,1.64),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(pointsCanvas),toneMapped:false,side:THREE.DoubleSide}));
+pointsPanel.position.set(3.25,1.72,17.89); pointsPanel.rotation.y=Math.PI; clubGroup.add(pointsPanel);
+
 /* Lobby reception desk and logo wall. */
 const reception=new THREE.Mesh(new THREE.BoxGeometry(3.25,.92,.72),woodMat);
 reception.position.set(0,.46,16.55); reception.castShadow=true; clubGroup.add(reception);
@@ -973,7 +988,7 @@ function stationLabel(number){
 }
 
 function addWallStation(side,z,number){
-  const x=side*4.53, face=side<0 ? -Math.PI/2 : Math.PI/2;
+  const x=side*4.53, face=side<0 ? Math.PI/2 : -Math.PI/2;
   const frame=new THREE.Mesh(new THREE.BoxGeometry(.13,1.72,1.72),stationFrameMat);
   frame.position.set(x,1.62,z); clubGroup.add(frame);
   const boardBack=new THREE.Mesh(new THREE.BoxGeometry(.145,1.50,1.50),stationDarkMat);
