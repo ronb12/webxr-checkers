@@ -11,8 +11,11 @@ import android.os.Bundle
  * The Horizon Platform SDK adapter is intentionally activated only when META_APP_ID is set.
  */
 class MainActivity : Activity() {
+    private lateinit var metaPresence: BradleyGroupPresence
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        metaPresence = BradleyGroupPresence(applicationContext)
+        metaPresence.initialize()
         forwardToBradleyCheckers(intent)
     }
     override fun onNewIntent(intent: Intent) {
