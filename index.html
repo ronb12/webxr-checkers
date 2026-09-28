@@ -993,13 +993,15 @@ function addWallStation(side,z,number){
     piece.position.set(x-side*.145,1.62+(3.5-r)*.17,z+(c-3.5)*.17);
     clubGroup.add(piece);
   }
-  /* Single clean black-and-gold CHECKERBOARD identification panel above each station. */
+  /* Raised black-and-gold CHECKERBOARD sign, deliberately separated from the board/wall. */
+  const signMount=new THREE.Mesh(new THREE.BoxGeometry(.09,.62,1.88),stationFrameMat);
+  signMount.position.set(x-side*.23,2.80,z); clubGroup.add(signMount);
   const label=new THREE.Mesh(
-    new THREE.PlaneGeometry(1.72,.50),
-    new THREE.MeshBasicMaterial({map:stationLabel(number),toneMapped:false,side:THREE.FrontSide,depthTest:true,depthWrite:true})
+    new THREE.PlaneGeometry(1.74,.50),
+    new THREE.MeshBasicMaterial({map:stationLabel(number),toneMapped:false,side:THREE.DoubleSide,depthTest:true,depthWrite:true})
   );
-  /* Put the text panel on the room-facing surface. No backing board/light bar can cover it. */
-  label.position.set(x-side*.245,2.78,z); label.rotation.y=face; label.renderOrder=3; clubGroup.add(label);
+  /* Both wall sides face inward differently; DoubleSide prevents a culled/missing sign in Quest. */
+  label.position.set(x-side*.285,2.80,z); label.rotation.y=face; label.renderOrder=10; clubGroup.add(label);
   const hit=new THREE.Mesh(new THREE.BoxGeometry(.34,1.82,1.82),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
   hit.position.set(x-side*.24,1.62,z); hit.userData={type:'casualStation',station:number}; clubGroup.add(hit); stationHitTargets.push(hit);
   /* No stools: keep the floor directly in front of every wall checkerboard open. */
