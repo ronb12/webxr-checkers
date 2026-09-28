@@ -995,6 +995,9 @@ function addWallStation(side,z,number){
     piece.position.set(x-side*.145,1.62+(3.5-r)*.17,z+(c-3.5)*.17);
     clubGroup.add(piece);
   }
+  /* Framed BOARD-number identification panel above every side-wall checkerboard. */
+  const labelFrame=new THREE.Mesh(new THREE.BoxGeometry(.075,.48,1.62),stationFrameMat);
+  labelFrame.position.set(x-side*.105,2.73,z); clubGroup.add(labelFrame);
   const label=new THREE.Mesh(new THREE.PlaneGeometry(1.46,.38),new THREE.MeshBasicMaterial({map:stationLabel(number),toneMapped:false,side:THREE.FrontSide}));
   label.position.set(x-side*.155,2.73,z); label.rotation.y=face; clubGroup.add(label);
   const lightBar=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.10,12),stationFrameMat);
@@ -1003,13 +1006,7 @@ function addWallStation(side,z,number){
   ready.position.set(x-side*.19,2.71,z+.59); clubGroup.add(ready);
   const hit=new THREE.Mesh(new THREE.BoxGeometry(.34,1.82,1.82),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
   hit.position.set(x-side*.24,1.62,z); hit.userData={type:'casualStation',station:number}; clubGroup.add(hit); stationHitTargets.push(hit);
-  /* Two upholstered stools face the wall board with enough VR personal space. */
-  for(const dz of [-.47,.47]){
-    const stool=new THREE.Mesh(new THREE.CylinderGeometry(.25,.28,.42,18),leatherMat);
-    stool.position.set(x-side*1.18,.23,z+dz); clubGroup.add(stool);
-    const foot=new THREE.Mesh(new THREE.TorusGeometry(.23,.018,8,20),stationFrameMat);
-    foot.rotation.x=Math.PI/2; foot.position.set(x-side*1.18,.18,z+dz); clubGroup.add(foot);
-  }
+  /* No stools: keep the floor directly in front of every wall checkerboard open. */
 }
 for(const [i,z] of [7.7,10.5,13.3].entries()){
   addWallStation(-1,z,i+1);
