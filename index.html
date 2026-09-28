@@ -946,8 +946,7 @@ function clubSign(text,sub,x,y,z,ry=0,w=2.9){
 }
 clubSign('BRADLEY CHECKERS','CLUB & CHAMPIONSHIP VENUE',0,2.45,17.90,0,4.25);
 clubSign('CHAMPIONSHIP ROOM','MAIN EVENT',0,2.72,5.91,Math.PI,2.8);
-clubSign('CASUAL LOUNGE','PLAY • RELAX • CONNECT',-4.59,2.32,10.3,Math.PI/2,2.5);
-clubSign('TROPHY GALLERY','CHAMPIONS • HISTORY • RANKINGS',4.59,2.32,10.3,-Math.PI/2,2.5);
+clubSign('CASUAL LOUNGE','PLAY • RELAX • CONNECT',-4.59,2.32,10.3,-Math.PI/2,2.5);
 
 /* Lobby reception desk and logo wall. */
 const reception=new THREE.Mesh(new THREE.BoxGeometry(3.25,.92,.72),woodMat);
@@ -987,6 +986,16 @@ function addWallStation(side,z,number){
     const sq=new THREE.Mesh(new THREE.BoxGeometry(.018,.165,.165),dark?stationRedMat:stationCreamMat);
     sq.position.set(x-side*.118,1.62+(3.5-r)*.17,z+(c-3.5)*.17); clubGroup.add(sq);
   }
+  /* Full starting checker layout: 12 red + 12 black pieces on playable squares. */
+  const redPieceMat=new THREE.MeshStandardMaterial({color:0xa71924,roughness:.30,metalness:.08});
+  const blackPieceMat=new THREE.MeshStandardMaterial({color:0x101114,roughness:.28,metalness:.18});
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    if((r+c)%2!==1 || (r>2 && r<5)) continue;
+    const piece=new THREE.Mesh(new THREE.CylinderGeometry(.062,.062,.025,20),r<3?blackPieceMat:redPieceMat);
+    piece.rotation.z=Math.PI/2;
+    piece.position.set(x-side*.145,1.62+(3.5-r)*.17,z+(c-3.5)*.17);
+    clubGroup.add(piece);
+  }
   const label=new THREE.Mesh(new THREE.PlaneGeometry(1.38,.34),new THREE.MeshBasicMaterial({map:stationLabel(number),toneMapped:false}));
   label.position.set(x-side*.145,2.72,z); label.rotation.y=face; clubGroup.add(label);
   const lightBar=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.10,12),stationFrameMat);
@@ -1021,18 +1030,11 @@ for(const x of [-1.55,1.55]){
 const socialTable=new THREE.Mesh(new THREE.BoxGeometry(1.45,.08,2.05),marbleMat); socialTable.position.set(0,.43,10.5); clubGroup.add(socialTable);
 const socialBase=new THREE.Mesh(new THREE.BoxGeometry(.58,.38,1.10),woodMat); socialBase.position.set(0,.22,10.5); clubGroup.add(socialBase);
 
-/* Club-style wall molding, acoustic panels and plants improve realism. */
+/* Club-style wall molding keeps the lounge refined while the floor stays completely open. */
 for(const side of [-1,1]) for(const z of [6.7,9.1,11.9,14.3]){
   const pilaster=new THREE.Mesh(new THREE.BoxGeometry(.10,2.65,.16),stationFrameMat); pilaster.position.set(side*4.46,1.40,z); clubGroup.add(pilaster);
 }
-for(const z of [7.0,14.0]) for(const side of [-1,1]){
-  const pot=new THREE.Mesh(new THREE.CylinderGeometry(.25,.20,.48,18),marbleMat); pot.position.set(side*3.82,.25,z); clubGroup.add(pot);
-  const stem=new THREE.Mesh(new THREE.CylinderGeometry(.035,.045,.65,10),new THREE.MeshStandardMaterial({color:0x49341f,roughness:.9})); stem.position.set(side*3.82,.78,z); clubGroup.add(stem);
-  for(let i=0;i<5;i++){
-    const leaf=new THREE.Mesh(new THREE.SphereGeometry(.20,10,7),new THREE.MeshStandardMaterial({color:0x18382b,roughness:.76}));
-    const a=i*Math.PI*2/5; leaf.scale.set(.7,1.35,.48); leaf.position.set(side*3.82+Math.cos(a)*.17,1.07+(i%2)*.11,z+Math.sin(a)*.17); clubGroup.add(leaf);
-  }
-}
+/* No indoor plants or freestanding decor beside the six boards: preserve clear VR sightlines and circulation. */
 /* Warm practical lights: emissive fixtures plus only two dynamic sources. */
 for(const z of [7.7,10.5,13.3]){
   const fixture=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.045,24),stationFrameMat); fixture.position.set(0,3.39,z); clubGroup.add(fixture);
@@ -1041,15 +1043,7 @@ for(const z of [7.7,10.5,13.3]){
 const loungeLightA=new THREE.PointLight(0xffd69a,1.45,5.2); loungeLightA.position.set(0,3.12,8.8); clubGroup.add(loungeLightA);
 const loungeLightB=new THREE.PointLight(0xffd69a,1.45,5.2); loungeLightB.position.set(0,3.12,12.2); clubGroup.add(loungeLightB);
 
-/* Trophy/history gallery: lit display cases on the opposite side. */
-for(const z of [8.0,10.5,13.0]){
-  const plinth=new THREE.Mesh(new THREE.BoxGeometry(1.15,.65,.82),marbleMat);
-  plinth.position.set(2.65,.33,z); clubGroup.add(plinth);
-  const glass=new THREE.Mesh(new THREE.BoxGeometry(1.05,1.20,.72),new THREE.MeshPhysicalMaterial({color:0xddeeff,transparent:true,opacity:.12,roughness:.08,transmission:.65,depthWrite:false}));
-  glass.position.set(2.65,1.22,z); clubGroup.add(glass);
-  const cup=new THREE.Mesh(new THREE.LatheGeometry([new THREE.Vector2(.05,0),new THREE.Vector2(.12,.12),new THREE.Vector2(.18,.28),new THREE.Vector2(.16,.38)],24),brassMat);
-  cup.position.set(2.65,.88,z); clubGroup.add(cup);
-}
+/* Trophy/history display cases removed so all six wall boards have open sightlines. */
 
 /* Spectator lounge near lobby: low-cost furniture, no NPC overhead. */
 for(const x of [-3.05,3.05]){
@@ -1365,40 +1359,7 @@ if(bcPlayerName || isLocalPreview) document.getElementById('playerSetup').style.
 refreshLeaderboard();
 setInterval(refreshLeaderboard,30000);
 
-/* Glass trophy cases — kept well outside the checkerboard sightline. */
-for(const x of [-2.48,2.48]){
-  const glassMat=new THREE.MeshPhysicalMaterial({
-    color:0xb9e2ee,
-    transparent:true,
-    opacity:.09,
-    roughness:.12,
-    metalness:0,
-    transmission:.42,
-    depthWrite:false,
-    side:THREE.DoubleSide
-  });
-
-  /* Use thin glass panels instead of one overlapping transparent box. */
-  for(const dx of [-.31,.31]){
-    const side=new THREE.Mesh(new THREE.BoxGeometry(.018,1.18,.34),glassMat);
-    side.position.set(x+dx,1.58,.02);
-    roomGroup.add(side);
-  }
-
-  const glassFront=new THREE.Mesh(
-    new THREE.BoxGeometry(.64,1.18,.018),
-    glassMat
-  );
-  glassFront.position.set(x,1.58,.19);
-  roomGroup.add(glassFront);
-
-  const caseBase=new THREE.Mesh(
-    new THREE.BoxGeometry(.72,.12,.44),
-    marbleMat
-  );
-  caseBase.position.set(x,.94,.02);
-  roomGroup.add(caseBase);
-}
+/* Glass trophy cases removed to keep the championship checkerboard area open. */
 
 /* IN-WORLD SCOREBOARD — visible inside Quest VR, not just the 2D HUD. */
 const scoreCanvas=document.createElement('canvas');
