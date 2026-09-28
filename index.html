@@ -964,6 +964,8 @@ const stationCreamMat=new THREE.MeshStandardMaterial({color:0xd7c59b,roughness:.
 const stationRedMat=new THREE.MeshStandardMaterial({color:0x6d1017,roughness:.42});
 const stationGreenMat=new THREE.MeshBasicMaterial({color:0x55d98a,toneMapped:false});
 const stationLabelTextures=[];
+const stationHitTargets=[];
+const stationStatus=Array.from({length:6},()=>({players:0,names:[]}));
 
 function stationLabel(number){
   const c=document.createElement('canvas'); c.width=512; c.height=128;
@@ -991,6 +993,8 @@ function addWallStation(side,z,number){
   lightBar.rotation.x=Math.PI/2; lightBar.position.set(x-side*.20,2.98,z); clubGroup.add(lightBar);
   const ready=new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),stationGreenMat);
   ready.position.set(x-side*.19,2.71,z+.59); clubGroup.add(ready);
+  const hit=new THREE.Mesh(new THREE.BoxGeometry(.34,1.82,1.82),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
+  hit.position.set(x-side*.24,1.62,z); hit.userData={type:'casualStation',station:number}; clubGroup.add(hit); stationHitTargets.push(hit);
   /* Two upholstered stools face the wall board with enough VR personal space. */
   for(const dz of [-.47,.47]){
     const stool=new THREE.Mesh(new THREE.CylinderGeometry(.25,.28,.42,18),leatherMat);
@@ -1488,6 +1492,80 @@ async function reportLeaderboardResult(result){
 let gameMode='ai';
 let aiDifficulty='medium';
 let aiThinking=false;
+
+/* SHARED SOCIAL LOUNGE — lightweight avatars, spatial voice, six independent stations. */
+const SOCIAL_HOST_ID='bradley-checkers-social-v1';
+let socialPeer=null, socialHost=false, socialHostConn=null, socialConnections=new Map(), socialCallPeers=new Map();
+let socialMic=null, socialMicEnabled=false, activeStation=0;
+const remoteAvatars=new Map();
+
+function localPose(){
+  const q=new THREE.Quaternion(), pos=new THREE.Vector3(); camera.getWorldPosition(pos); camera.getWorldQuaternion(q);
+  return {type:'pose',id:bcDeviceId,name:bcPlayerName||'Guest',station:activeStation,p:[pos.x,pos.y,pos.z],q:[q.x,q.y,q.z,q.w]};
+}
+function makeSocialAvatar(id,name){
+  const g=new THREE.Group();
+  const bodyMat=new THREE.MeshStandardMaterial({color:0x252a33,roughness:.72});
+  const skinMat=new THREE.MeshStandardMaterial({color:0x7a4b32,roughness:.72});
+  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.22,.72,5,10),bodyMat); body.position.y=-.65; g.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.18,16,12),skinMat); head.position.y=-.05; g.add(head);
+  const badge=document.createElement('canvas'); badge.width=256; badge.height=64; const x=badge.getContext('2d'); x.fillStyle='#111';x.fillRect(0,0,256,64);x.fillStyle='#ffd95a';x.font='bold 24px Arial';x.textAlign='center';x.fillText((name||'PLAYER').slice(0,18),128,40);
+  const label=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(badge),transparent:true})); label.scale.set(1.15,.29,1); label.position.y=.30; g.add(label);
+  scene.add(g); remoteAvatars.set(id,g); return g;
+}
+function applySocialPose(msg){
+  if(!msg||msg.id===bcDeviceId||!Array.isArray(msg.p))return;
+  const a=remoteAvatars.get(msg.id)||makeSocialAvatar(msg.id,msg.name);
+  a.position.set(msg.p[0],msg.p[1],msg.p[2]); if(msg.q)a.quaternion.set(...msg.q);
+}
+function updateStationLabels(){
+  for(let i=0;i<6;i++){
+    const c=stationLabelTextures[i]?.image;if(!c)continue;const x=c.getContext('2d'), st=stationStatus[i];
+    x.fillStyle='#09090b';x.fillRect(0,0,512,128);x.strokeStyle='#c9a227';x.lineWidth=8;x.strokeRect(5,5,502,118);x.textAlign='center';x.fillStyle='#ffd95a';x.font='bold 34px Arial';x.fillText(`BOARD ${i+1}`,256,48);x.fillStyle=st.players>=2?'#ff7777':'#68e49a';x.font='bold 23px Arial';x.fillText(st.players>=2?'IN MATCH • 2 / 2':`AVAILABLE • ${st.players} / 2`,256,88);stationLabelTextures[i].needsUpdate=true;
+  }
+}
+function socialRoster(){
+  const people=[{id:bcDeviceId,peerId:socialPeer?.id||'',name:bcPlayerName||'Guest',station:activeStation}];
+  for(const c of socialConnections.values()) if(c.metadata) people.push({id:c.metadata.deviceId,peerId:c.peer,name:c.metadata.name,station:c.metadata.station||0});
+  stationStatus.forEach(s=>{s.players=0;s.names=[]}); for(const p of people) if(p.station>0&&p.station<=6){const st=stationStatus[p.station-1];st.players++;st.names.push(p.name)} updateStationLabels();
+  return {type:'roster',people};
+}
+function applyRoster(msg){for(const p of msg.people||[]){if(p.id!==bcDeviceId&&p.peerId&&!socialCallPeers.has(p.peerId)&&socialPeer?.open&&socialPeer.id<p.peerId)callSocialPeer(p.peerId)}stationStatus.forEach(s=>{s.players=0;s.names=[]});for(const p of msg.people||[])if(p.station>0&&p.station<=6){const st=stationStatus[p.station-1];st.players++;st.names.push(p.name)}updateStationLabels();}
+function socialBroadcast(msg,except=null){for(const c of socialConnections.values())if(c.open&&c!==except)c.send(msg)}
+function wireSocialConn(c){
+  socialConnections.set(c.peer,c);
+  c.on('data',m=>{if(m.type==='pose'){applySocialPose(m);if(socialHost)socialBroadcast(m,c)}else if(m.type==='roster')applyRoster(m);else if(m.type==='station'){if(c.metadata)c.metadata.station=m.station;if(socialHost){const r=socialRoster();socialBroadcast(r)}}});
+  c.on('close',()=>{socialConnections.delete(c.peer);const id=c.metadata?.deviceId;if(id&&remoteAvatars.has(id)){scene.remove(remoteAvatars.get(id));remoteAvatars.delete(id)}if(socialHost){const r=socialRoster();socialBroadcast(r)}});
+  if(socialHost){setTimeout(()=>{const r=socialRoster();socialBroadcast(r)},100)}
+}
+async function enableSpatialVoice(){
+  if(socialMicEnabled)return true;
+  try{socialMic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});socialMicEnabled=true;return true}catch(e){console.warn('Microphone permission denied',e);return false}
+}
+function attachSpatialAudio(call,stream,peerId){
+  let audio=document.getElementById('voice-'+peerId);if(!audio){audio=document.createElement('audio');audio.id='voice-'+peerId;audio.autoplay=true;document.body.appendChild(audio)}audio.srcObject=stream;
+  /* WebAudio spatial panner follows remote avatar position. */
+  try{ensureAudio();const src=audioCtx.createMediaStreamSource(stream),pan=audioCtx.createPanner();pan.panningModel='HRTF';pan.distanceModel='inverse';pan.refDistance=1.4;pan.maxDistance=12;pan.rolloffFactor=1.15;src.connect(pan).connect(audioCtx.destination);socialCallPeers.set(peerId,{call,pan})}catch(e){console.warn('Spatial voice panner unavailable',e)}
+}
+async function callSocialPeer(peerId){if(!await enableSpatialVoice())return;const call=socialPeer.call(peerId,socialMic);call.on('stream',s=>attachSpatialAudio(call,s,peerId))}
+function startSocialLounge(){
+  if(socialPeer)return;socialPeer=new Peer(SOCIAL_HOST_ID,{debug:0});
+  socialPeer.on('open',()=>{socialHost=true;socialPeer.on('connection',wireSocialConn);socialPeer.on('call',async call=>{if(await enableSpatialVoice()){call.answer(socialMic);call.on('stream',s=>attachSpatialAudio(call,s,call.peer))}})});
+  socialPeer.on('error',err=>{if(err.type!=='unavailable-id')return;socialPeer.destroy();socialPeer=new Peer(undefined,{debug:0});socialPeer.on('open',()=>{socialHost=false;socialHostConn=socialPeer.connect(SOCIAL_HOST_ID,{reliable:true,metadata:{deviceId:bcDeviceId,name:bcPlayerName||'Guest',station:activeStation}});wireSocialConn(socialHostConn);socialPeer.on('call',async call=>{if(await enableSpatialVoice()){call.answer(socialMic);call.on('stream',s=>attachSpatialAudio(call,s,call.peer))}});callSocialPeer(SOCIAL_HOST_ID)})});
+}
+async function chooseCasualStation(n){
+  await enableSpatialVoice();
+  const st=stationStatus[n-1];if(st&&st.players>=2){onlineStatus('BOARD '+n+' IS IN MATCH');return}
+  activeStation=n;const msg={type:'station',station:n};if(socialHost){const r=socialRoster();socialBroadcast(r)}else if(socialHostConn?.open)socialHostConn.send(msg);
+  const code='BCS'+String(n).padStart(3,'0');
+  if(st&&st.players===0)hostOnlineRoom(code,'Board '+n+' • waiting for opponent…');else joinOnlineRoom(code);
+  playerRig.position.set(0,0,4.1);onlineStatus('CASUAL BOARD '+n+' • '+code);
+}
+setTimeout(startSocialLounge,700);
+setInterval(()=>{
+  if(!socialPeer)return;const pose=localPose();if(socialHost)socialBroadcast(pose);else if(socialHostConn?.open)socialHostConn.send(pose);
+  const listenerPos=new THREE.Vector3();camera.getWorldPosition(listenerPos);for(const [id,v] of socialCallPeers){const a=remoteAvatars.get(id);if(a){const p=new THREE.Vector3();a.getWorldPosition(p);v.pan.positionX.value=p.x;v.pan.positionY.value=p.y;v.pan.positionZ.value=p.z}}
+},100);
 
 /* META QUEST NATIVE SOCIAL BRIDGE
    The native Quest shell injects window.BradleyMetaBridge. WebXR remains fully usable without it. */
@@ -2995,13 +3073,9 @@ function handleObject(obj){
     turn==='black'
   ) return;
 
-  /* In an online match, each device can move only its assigned color. */
-  if(
-    gameMode==='online' &&
-    (!onlineConnection || !onlineConnection.open || turn!==onlineColor)
-  ) return;
-
   const data=obj.userData;
+
+  if(data.type==='casualStation'){ chooseCasualStation(data.station); return; }
 
   if(data.type==='invitePlayerRow'){
     const name=invitePlayers[data.index];
@@ -3016,6 +3090,9 @@ function handleObject(obj){
     if(pendingInvite) respondToInvite('decline');
     return;
   }
+
+  /* In an online match, each device can move only its assigned color. */
+  if(gameMode==='online' && (!onlineConnection || !onlineConnection.open || turn!==onlineColor)) return;
 
   if(data.type==='piece'){
 
@@ -3136,7 +3213,7 @@ window.addEventListener(
 
     const hits=
       raycaster.intersectObjects(
-        [...inviteHitTargets,...pieces,...cells],
+        [...stationHitTargets,...inviteHitTargets,...pieces,...cells],
         false
       );
 
@@ -3201,7 +3278,7 @@ function controller(index){
 
       const hits=
         raycaster.intersectObjects(
-          [...inviteHitTargets,...pieces,...cells],
+          [...stationHitTargets,...inviteHitTargets,...pieces,...cells],
           false
         );
 
