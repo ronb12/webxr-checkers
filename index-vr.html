@@ -410,7 +410,27 @@ window.addEventListener(
 );
 
 document.body.appendChild(renderer.domElement);
-document.body.appendChild(VRButton.createButton(renderer));
+const vrButton=VRButton.createButton(renderer);
+document.body.appendChild(vrButton);
+
+/* Meta Horizon immersive PWA launch.
+   In a packaged Quest PWA, the app-icon launch counts as user activation, so
+   Meta allows an immersive WebXR session to be requested immediately. Browser
+   users still get the normal ENTER VR button. */
+async function autoEnterMetaPWA(){
+  const metaPwaLaunch=new URLSearchParams(location.search).get('source')==='pwa' || window.getDigitalGoodsService!==undefined;
+  if(!metaPwaLaunch || !navigator.xr || renderer.xr.isPresenting) return;
+  try{
+    if(!(await navigator.xr.isSessionSupported('immersive-vr'))) return;
+    const session=await navigator.xr.requestSession('immersive-vr',{
+      optionalFeatures:['local-floor','bounded-floor','hand-tracking','layers']
+    });
+    await renderer.xr.setSession(session);
+  }catch(err){
+    console.warn('Meta PWA immersive auto-start unavailable; ENTER VR remains available.',err);
+  }
+}
+setTimeout(autoEnterMetaPWA,250);
 
 scene.add(
   new THREE.HemisphereLight(
@@ -1304,6 +1324,37 @@ let gameMode='ai';
 let aiDifficulty='medium';
 let aiThinking=false;
 
+/* META QUEST NATIVE SOCIAL BRIDGE
+   The native Quest shell injects window.BradleyMetaBridge. WebXR remains fully usable without it. */
+function metaBridge(){ return window.BradleyMetaBridge||null; }
+function syncMetaPresence(joinable=true){
+  const bridge=metaBridge();
+  if(!bridge || !onlineRoomCode) return;
+  try{ bridge.setPresence?.({destinationApiName:'BRADLEY_CHECKERS_MATCH',lobbySessionId:onlineRoomCode,matchSessionId:onlineRoomCode,isJoinable:!!joinable}); }
+  catch(e){ console.warn('Meta presence unavailable',e); }
+}
+function clearMetaPresence(){
+  try{ metaBridge()?.clearPresence?.(); }catch(e){ console.warn('Meta presence clear unavailable',e); }
+}
+function installMetaJoinHandler(){
+  window.addEventListener('bradley-meta-join',e=>{
+    const code=String(e.detail?.lobbySessionId||'').trim().toUpperCase();
+    if(code) joinOnlineRoom(code);
+  });
+  const params=new URLSearchParams(location.search);
+  const launchCode=String(params.get('room')||params.get('lobby_session_id')||'').trim().toUpperCase();
+  if(launchCode) setTimeout(()=>joinOnlineRoom(launchCode),350);
+}
+async function launchMetaQuickInvite(){
+  const bridge=metaBridge();
+  if(!bridge){ onlineStatus('META INVITES REQUIRE QUEST APP'); return false; }
+  if(!onlineRoomCode) hostOnlineRoom();
+  syncMetaPresence(true);
+  try{ await bridge.launchInvitePanel?.(); return true; }
+  catch(e){ onlineStatus('META INVITE UNAVAILABLE'); return false; }
+}
+installMetaJoinHandler();
+
 /* ONLINE MULTIPLAYER — PeerJS WebRTC data channel. Host is Red, guest is Black. */
 let onlinePeer=null;
 let onlineConnection=null;
@@ -1360,10 +1411,12 @@ function attachOnlineConnection(conn){
     document.getElementById('status').textContent=
       turn===onlineColor ? 'YOUR TURN — '+turn.toUpperCase() : 'OPPONENT TURN — '+turn.toUpperCase();
     if(onlineColor==='red') sendOnlineState();
+    syncMetaPresence(false);
   });
   conn.on('data',applyOnlineState);
   conn.on('close',()=>{
     onlineStatus('ONLINE PLAYER DISCONNECTED');
+    syncMetaPresence(true);
     document.getElementById('status').textContent='Opponent disconnected';
   });
   conn.on('error',()=>onlineStatus('ONLINE CONNECTION ERROR'));
@@ -1382,7 +1435,7 @@ function hostOnlineRoom(code,waitingText='Waiting for Black player…'){
   onlinePeer.on('open',()=>{
     gameMode='online';turn='red';selected=null;forcedPiece=null;gameOver=false;leaderboardResultReported=false;
     redCaptured=0;blackCaptured=0;resetState();createBoard();updateScore();
-    onlineStatus('ROOM '+onlineRoomCode+' • WAITING');document.getElementById('status').textContent=waitingText;
+    onlineStatus('ROOM '+onlineRoomCode+' • WAITING');document.getElementById('status').textContent=waitingText;syncMetaPresence(true);
   });
   onlinePeer.on('connection',conn=>attachOnlineConnection(conn));
   onlinePeer.on('error',()=>onlineStatus('ROOM ERROR — TRY AGAIN'));
@@ -1417,7 +1470,7 @@ async function respondToInvite(action){
 
 document.getElementById('hostOnline').addEventListener('click',()=>hostOnlineRoom());
 document.getElementById('joinOnline').addEventListener('click',()=>{const code=(prompt('Enter Bradley Checkers room code:')||'').trim().toUpperCase();if(code)joinOnlineRoom(code);});
-document.getElementById('invitePlayer').addEventListener('click',async()=>{await refreshInvitePlayers();if(!invitePlayers.length){alert('No other registered players are available yet.');return;}const name=(prompt('Invite player ID:\n'+invitePlayers.slice(0,10).join('\n'))||'').trim();if(name)sendPlayerInvite(name);});
+document.getElementById('invitePlayer').addEventListener('click',async()=>{if(metaBridge()){await launchMetaQuickInvite();return;}await refreshInvitePlayers();if(!invitePlayers.length){alert('No other registered players are available yet.');return;}const name=(prompt('Invite player ID:\n'+invitePlayers.slice(0,10).join('\n'))||'').trim();if(name)sendPlayerInvite(name);});
 refreshInvitePlayers();pollInvites();setInterval(refreshInvitePlayers,30000);setInterval(pollInvites,3000);
 
 /* Spatial-style game audio generated locally with Web Audio. */

@@ -1,0 +1,3 @@
+# Copy to ~/.gradle/gradle.properties or pass with -PMETA_APP_ID=1285271641346248...
+# Never commit your private app configuration.
+META_APP_ID=1285271641346248
