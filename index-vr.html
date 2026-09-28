@@ -969,8 +969,7 @@ function stationLabel(number){
   const c=document.createElement('canvas'); c.width=512; c.height=128;
   const x=c.getContext('2d'); x.fillStyle='#09090b'; x.fillRect(0,0,512,128);
   x.strokeStyle='#c9a227'; x.lineWidth=8; x.strokeRect(5,5,502,118);
-  x.textAlign='center'; x.fillStyle='#ffffff'; x.font='900 50px Arial'; x.fillText(`BOARD ${number}`,256,58);
-  x.fillStyle='#68e49a'; x.font='bold 25px Arial'; x.fillText('AVAILABLE • 0 / 2',256,101);
+  x.textAlign='center'; x.fillStyle='#ffd95a'; x.font='900 48px Arial'; x.fillText(`CHECKERBOARD ${number}`,256,76);
   const t=new THREE.CanvasTexture(c); stationLabelTextures.push(t); return t;
 }
 
@@ -1458,7 +1457,7 @@ function applySocialPose(msg){
 function updateStationLabels(){
   for(let i=0;i<6;i++){
     const c=stationLabelTextures[i]?.image;if(!c)continue;const x=c.getContext('2d'), st=stationStatus[i];
-    x.fillStyle='#09090b';x.fillRect(0,0,512,128);x.strokeStyle='#c9a227';x.lineWidth=8;x.strokeRect(5,5,502,118);x.textAlign='center';x.fillStyle='#ffffff';x.font='900 50px Arial';x.fillText(`BOARD ${i+1}`,256,58);x.fillStyle=st.players>=2?'#ff7777':'#68e49a';x.font='bold 25px Arial';x.fillText(st.players>=2?'IN MATCH • 2 / 2':`AVAILABLE • ${st.players} / 2`,256,101);stationLabelTextures[i].needsUpdate=true;
+    x.fillStyle='#09090b';x.fillRect(0,0,512,128);x.strokeStyle='#c9a227';x.lineWidth=10;x.strokeRect(5,5,502,118);x.textAlign='center';x.fillStyle='#ffd95a';x.font='900 48px Arial';x.fillText(`CHECKERBOARD ${i+1}`,256,76);stationLabelTextures[i].needsUpdate=true;
   }
 }
 function socialRoster(){
