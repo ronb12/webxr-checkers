@@ -993,15 +993,13 @@ function addWallStation(side,z,number){
     piece.position.set(x-side*.145,1.62+(3.5-r)*.17,z+(c-3.5)*.17);
     clubGroup.add(piece);
   }
-  /* Framed BOARD-number identification panel above every side-wall checkerboard. */
-  const labelFrame=new THREE.Mesh(new THREE.BoxGeometry(.075,.58,1.82),stationFrameMat);
-  labelFrame.position.set(x-side*.105,2.78,z); clubGroup.add(labelFrame);
-  const label=new THREE.Mesh(new THREE.PlaneGeometry(1.66,.48),new THREE.MeshBasicMaterial({map:stationLabel(number),toneMapped:false,side:THREE.FrontSide}));
-  label.position.set(x-side*.205,2.78,z); label.rotation.y=face; clubGroup.add(label);
-  const lightBar=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.10,12),stationFrameMat);
-  lightBar.rotation.x=Math.PI/2; lightBar.position.set(x-side*.20,2.98,z); clubGroup.add(lightBar);
-  const ready=new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),stationGreenMat);
-  ready.position.set(x-side*.19,2.71,z+.59); clubGroup.add(ready);
+  /* Single clean black-and-gold CHECKERBOARD identification panel above each station. */
+  const label=new THREE.Mesh(
+    new THREE.PlaneGeometry(1.72,.50),
+    new THREE.MeshBasicMaterial({map:stationLabel(number),toneMapped:false,side:THREE.FrontSide,depthTest:true,depthWrite:true})
+  );
+  /* Put the text panel on the room-facing surface. No backing board/light bar can cover it. */
+  label.position.set(x-side*.245,2.78,z); label.rotation.y=face; label.renderOrder=3; clubGroup.add(label);
   const hit=new THREE.Mesh(new THREE.BoxGeometry(.34,1.82,1.82),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
   hit.position.set(x-side*.24,1.62,z); hit.userData={type:'casualStation',station:number}; clubGroup.add(hit); stationHitTargets.push(hit);
   /* No stools: keep the floor directly in front of every wall checkerboard open. */
