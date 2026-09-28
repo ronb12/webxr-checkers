@@ -945,7 +945,6 @@ function clubSign(text,sub,x,y,z,ry=0,w=2.9){
   m.position.set(x,y,z); m.rotation.y=ry; clubGroup.add(m); return m;
 }
 clubSign('BRADLEY CHECKERS','CLUB & CHAMPIONSHIP VENUE',0,2.45,17.90,Math.PI,4.25);
-clubSign('CHAMPIONSHIP ROOM','MAIN EVENT',0,2.72,5.91,0,2.8);
 clubSign('CASUAL LOUNGE','PLAY • RELAX • CONNECT',-4.59,2.32,10.3,Math.PI/2,2.5);
 
 /* Lobby reception desk and logo wall. */
@@ -996,8 +995,8 @@ function addWallStation(side,z,number){
     piece.position.set(x-side*.145,1.62+(3.5-r)*.17,z+(c-3.5)*.17);
     clubGroup.add(piece);
   }
-  const label=new THREE.Mesh(new THREE.PlaneGeometry(1.38,.34),new THREE.MeshBasicMaterial({map:stationLabel(number),toneMapped:false,side:THREE.FrontSide}));
-  label.position.set(x-side*.145,2.72,z); label.rotation.y=face; clubGroup.add(label);
+  const label=new THREE.Mesh(new THREE.PlaneGeometry(1.46,.38),new THREE.MeshBasicMaterial({map:stationLabel(number),toneMapped:false,side:THREE.FrontSide}));
+  label.position.set(x-side*.155,2.73,z); label.rotation.y=face; clubGroup.add(label);
   const lightBar=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.10,12),stationFrameMat);
   lightBar.rotation.x=Math.PI/2; lightBar.position.set(x-side*.20,2.98,z); clubGroup.add(lightBar);
   const ready=new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),stationGreenMat);
@@ -1017,19 +1016,7 @@ for(const [i,z] of [7.7,10.5,13.3].entries()){
   addWallStation(1,z,i+4);
 }
 
-/* Center becomes a realistic social lounge with clear circulation. */
-const loungeRug=new THREE.Mesh(new THREE.PlaneGeometry(4.3,4.9),new THREE.MeshPhysicalMaterial({color:0x261013,roughness:.82,clearcoat:.06}));
-loungeRug.rotation.x=-Math.PI/2; loungeRug.position.set(0,.022,10.5); clubGroup.add(loungeRug);
-for(const x of [-1.55,1.55]){
-  const sofa=new THREE.Mesh(new THREE.BoxGeometry(1.05,.38,2.35),leatherMat); sofa.position.set(x,.40,10.5); clubGroup.add(sofa);
-  const back=new THREE.Mesh(new THREE.BoxGeometry(.18,.72,2.35),leatherMat); back.position.set(x+(x<0?-.45:.45),.72,10.5); clubGroup.add(back);
-  for(const z of [9.65,11.35]){
-    const arm=new THREE.Mesh(new THREE.BoxGeometry(.82,.52,.16),leatherMat); arm.position.set(x,.54,z); clubGroup.add(arm);
-  }
-}
-const socialTable=new THREE.Mesh(new THREE.BoxGeometry(1.45,.08,2.05),marbleMat); socialTable.position.set(0,.43,10.5); clubGroup.add(socialTable);
-const socialBase=new THREE.Mesh(new THREE.BoxGeometry(.58,.38,1.10),woodMat); socialBase.position.set(0,.22,10.5); clubGroup.add(socialBase);
-
+/* Center lounge furniture removed: keep the six-board area completely open for VR circulation. */
 /* Club-style wall molding keeps the lounge refined while the floor stays completely open. */
 for(const side of [-1,1]) for(const z of [6.7,9.1,11.9,14.3]){
   const pilaster=new THREE.Mesh(new THREE.BoxGeometry(.10,2.65,.16),stationFrameMat); pilaster.position.set(side*4.46,1.40,z); clubGroup.add(pilaster);
@@ -1045,15 +1032,7 @@ const loungeLightB=new THREE.PointLight(0xffd69a,1.45,5.2); loungeLightB.positio
 
 /* Trophy/history display cases removed so all six wall boards have open sightlines. */
 
-/* Spectator lounge near lobby: low-cost furniture, no NPC overhead. */
-for(const x of [-3.05,3.05]){
-  const sofa=new THREE.Mesh(new THREE.BoxGeometry(2.25,.38,.78),leatherMat);
-  sofa.position.set(x,.40,15.55); clubGroup.add(sofa);
-  const sofaBack=new THREE.Mesh(new THREE.BoxGeometry(2.25,.72,.18),leatherMat);
-  sofaBack.position.set(x,.73,15.90); clubGroup.add(sofaBack);
-}
-const loungeTable=new THREE.Mesh(new THREE.BoxGeometry(2.0,.08,.95),marbleMat);
-loungeTable.position.set(0,.43,14.9); clubGroup.add(loungeTable);
+/* Spectator couches and tables removed: lobby approach remains open. */
 
 /* Quest-friendly lighting: few real lights, emissive fixtures for the rest. */
 for(const z of [7.6,11.2,14.8,17.1]){
