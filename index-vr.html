@@ -959,7 +959,7 @@ pointsCtx.fillStyle='#ffffff'; pointsCtx.font='bold 42px Arial';
 pointsCtx.fillText('WIN  =  2 POINTS',384,174); pointsCtx.fillText('DRAW  =  1 POINT',384,252); pointsCtx.fillText('LOSS  =  0 POINTS',384,330);
 pointsCtx.fillStyle='#d6d6d6'; pointsCtx.font='26px Arial'; pointsCtx.fillText('Points from completed matches count',384,408); pointsCtx.fillText('toward the Bradley Checkers leaderboard.',384,446);
 const pointsPanel=new THREE.Mesh(new THREE.PlaneGeometry(2.45,1.64),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(pointsCanvas),toneMapped:false,side:THREE.DoubleSide}));
-pointsPanel.position.set(3.25,1.72,17.89); pointsPanel.rotation.y=Math.PI; clubGroup.add(pointsPanel);
+pointsPanel.position.set(4.605,1.72,16.55); pointsPanel.rotation.y=-Math.PI/2; clubGroup.add(pointsPanel);
 
 /* Lobby reception desk and logo wall. */
 const reception=new THREE.Mesh(new THREE.BoxGeometry(3.25,.92,.72),woodMat);
@@ -1021,7 +1021,8 @@ function addWallStation(side,z,number){
   hit.position.set(x-side*.24,1.62,z); hit.userData={type:'casualStation',station:number}; clubGroup.add(hit); stationHitTargets.push(hit);
   /* No stools: keep the floor directly in front of every wall checkerboard open. */
 }
-for(const [i,z] of [7.7,10.5,13.3].entries()){
+/* Three evenly spaced, wall-centered board/sign pairs per side. */
+for(const [i,z] of [8.2,11.75,15.3].entries()){
   addWallStation(-1,z,i+1);
   addWallStation(1,z,i+4);
 }
