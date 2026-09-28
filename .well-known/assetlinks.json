@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bradleyvirtualsolutions.checkers",
+      "sha256_cert_fingerprints": [
+        "A8:D0:7F:B1:31:12:0E:21:0C:6E:3B:92:DB:B0:71:BD:EB:73:99:2F:B5:78:C3:DB:49:CA:8E:8C:4F:85:5F:15:4"
+      ]
+    }
+  }
+]
