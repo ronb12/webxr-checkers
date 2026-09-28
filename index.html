@@ -903,6 +903,170 @@ for(const x of [-1.95,1.95]){
 }
 
 
+/* BRADLEY CHECKERS CLUB EXPANSION
+   Preserve the championship room; extend the venue beyond its rear opening. */
+const clubGroup=new THREE.Group();
+roomGroup.add(clubGroup);
+const clubWallMat=new THREE.MeshStandardMaterial({color:0x111114,roughness:.58,metalness:.12});
+const clubFloorMat=new THREE.MeshPhysicalMaterial({color:0x17171a,roughness:.25,metalness:.12,clearcoat:.55,clearcoatRoughness:.22});
+
+/* Rear portal frames the original room as the Championship Room. */
+for(const x of [-2.45,2.45]){
+  const jamb=new THREE.Mesh(new THREE.BoxGeometry(.16,3.25,.20),brassMat);
+  jamb.position.set(x,1.62,5.78); clubGroup.add(jamb);
+}
+const portalTop=new THREE.Mesh(new THREE.BoxGeometry(5.06,.16,.20),brassMat);
+portalTop.position.set(0,3.18,5.78); clubGroup.add(portalTop);
+
+/* Lobby and club corridor behind the championship room. */
+const clubFloor=new THREE.Mesh(new THREE.PlaneGeometry(9.4,12.5),clubFloorMat);
+clubFloor.rotation.x=-Math.PI/2; clubFloor.position.set(0,.014,11.75); clubFloor.receiveShadow=true; clubGroup.add(clubFloor);
+for(const x of [-4.7,4.7]){
+  const w=new THREE.Mesh(new THREE.BoxGeometry(.16,3.55,12.5),clubWallMat);
+  w.position.set(x,1.77,11.75); w.receiveShadow=true; clubGroup.add(w);
+}
+const lobbyBack=new THREE.Mesh(new THREE.BoxGeometry(9.55,3.55,.16),clubWallMat);
+lobbyBack.position.set(0,1.77,18.0); clubGroup.add(lobbyBack);
+const clubCeiling=new THREE.Mesh(new THREE.BoxGeometry(9.55,.10,12.5),new THREE.MeshStandardMaterial({color:0x09090b,roughness:.65}));
+clubCeiling.position.set(0,3.52,11.75); clubGroup.add(clubCeiling);
+
+/* Architectural ribs create depth without expensive geometry. */
+for(const z of [7.0,9.4,11.8,14.2,16.6]){
+  const beam=new THREE.Mesh(new THREE.BoxGeometry(9.1,.08,.10),brassMat);
+  beam.position.set(0,3.37,z); clubGroup.add(beam);
+  for(const x of [-4.35,4.35]){
+    const pilaster=new THREE.Mesh(new THREE.BoxGeometry(.14,2.7,.20),brassMat);
+    pilaster.position.set(x,1.38,z); clubGroup.add(pilaster);
+  }
+}
+
+function clubSign(text,sub,x,y,z,ry=0,w=2.9){
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,.72),new THREE.MeshBasicMaterial({map:makeSignTexture(text,sub),toneMapped:false,side:THREE.DoubleSide}));
+  m.position.set(x,y,z); m.rotation.y=ry; clubGroup.add(m); return m;
+}
+clubSign('BRADLEY CHECKERS','CLUB & CHAMPIONSHIP VENUE',0,2.45,17.90,0,4.25);
+clubSign('CHAMPIONSHIP ROOM','MAIN EVENT',0,2.72,5.91,Math.PI,2.8);
+clubSign('CASUAL LOUNGE','PLAY • RELAX • CONNECT',-4.59,2.32,10.3,Math.PI/2,2.5);
+clubSign('TROPHY GALLERY','CHAMPIONS • HISTORY • RANKINGS',4.59,2.32,10.3,-Math.PI/2,2.5);
+
+/* Lobby reception desk and logo wall. */
+const reception=new THREE.Mesh(new THREE.BoxGeometry(3.25,.92,.72),woodMat);
+reception.position.set(0,.46,16.55); reception.castShadow=true; clubGroup.add(reception);
+const receptionTop=new THREE.Mesh(new THREE.BoxGeometry(3.45,.08,.86),marbleMat);
+receptionTop.position.set(0,.95,16.55); clubGroup.add(receptionTop);
+const receptionBand=new THREE.Mesh(new THREE.BoxGeometry(2.45,.08,.03),brassMat);
+receptionBand.position.set(0,.58,16.18); clubGroup.add(receptionBand);
+
+/* SIX WALL-MOUNTED CASUAL MATCH STATIONS — 12 simultaneous players. */
+const stationFrameMat=new THREE.MeshStandardMaterial({color:0xb58a2a,metalness:.92,roughness:.20});
+const stationDarkMat=new THREE.MeshStandardMaterial({color:0x111114,roughness:.36,metalness:.18});
+const stationCreamMat=new THREE.MeshStandardMaterial({color:0xd7c59b,roughness:.52});
+const stationRedMat=new THREE.MeshStandardMaterial({color:0x6d1017,roughness:.42});
+const stationGreenMat=new THREE.MeshBasicMaterial({color:0x55d98a,toneMapped:false});
+const stationLabelTextures=[];
+
+function stationLabel(number){
+  const c=document.createElement('canvas'); c.width=512; c.height=128;
+  const x=c.getContext('2d'); x.fillStyle='#09090b'; x.fillRect(0,0,512,128);
+  x.strokeStyle='#c9a227'; x.lineWidth=8; x.strokeRect(5,5,502,118);
+  x.textAlign='center'; x.fillStyle='#ffd95a'; x.font='bold 34px Arial'; x.fillText(`BOARD ${number}`,256,48);
+  x.fillStyle='#68e49a'; x.font='bold 23px Arial'; x.fillText('AVAILABLE • 0 / 2',256,88);
+  const t=new THREE.CanvasTexture(c); stationLabelTextures.push(t); return t;
+}
+
+function addWallStation(side,z,number){
+  const x=side*4.53, face=side<0 ? Math.PI/2 : -Math.PI/2;
+  const frame=new THREE.Mesh(new THREE.BoxGeometry(.13,1.72,1.72),stationFrameMat);
+  frame.position.set(x,1.62,z); clubGroup.add(frame);
+  const boardBack=new THREE.Mesh(new THREE.BoxGeometry(.145,1.50,1.50),stationDarkMat);
+  boardBack.position.set(x-side*.035,1.62,z); clubGroup.add(boardBack);
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    const dark=(r+c)%2===1;
+    const sq=new THREE.Mesh(new THREE.BoxGeometry(.018,.165,.165),dark?stationRedMat:stationCreamMat);
+    sq.position.set(x-side*.118,1.62+(3.5-r)*.17,z+(c-3.5)*.17); clubGroup.add(sq);
+  }
+  const label=new THREE.Mesh(new THREE.PlaneGeometry(1.38,.34),new THREE.MeshBasicMaterial({map:stationLabel(number),toneMapped:false}));
+  label.position.set(x-side*.145,2.72,z); label.rotation.y=face; clubGroup.add(label);
+  const lightBar=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.10,12),stationFrameMat);
+  lightBar.rotation.x=Math.PI/2; lightBar.position.set(x-side*.20,2.98,z); clubGroup.add(lightBar);
+  const ready=new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),stationGreenMat);
+  ready.position.set(x-side*.19,2.71,z+.59); clubGroup.add(ready);
+  /* Two upholstered stools face the wall board with enough VR personal space. */
+  for(const dz of [-.47,.47]){
+    const stool=new THREE.Mesh(new THREE.CylinderGeometry(.25,.28,.42,18),leatherMat);
+    stool.position.set(x-side*1.18,.23,z+dz); clubGroup.add(stool);
+    const foot=new THREE.Mesh(new THREE.TorusGeometry(.23,.018,8,20),stationFrameMat);
+    foot.rotation.x=Math.PI/2; foot.position.set(x-side*1.18,.18,z+dz); clubGroup.add(foot);
+  }
+}
+for(const [i,z] of [7.7,10.5,13.3].entries()){
+  addWallStation(-1,z,i+1);
+  addWallStation(1,z,i+4);
+}
+
+/* Center becomes a realistic social lounge with clear circulation. */
+const loungeRug=new THREE.Mesh(new THREE.PlaneGeometry(4.3,4.9),new THREE.MeshPhysicalMaterial({color:0x261013,roughness:.82,clearcoat:.06}));
+loungeRug.rotation.x=-Math.PI/2; loungeRug.position.set(0,.022,10.5); clubGroup.add(loungeRug);
+for(const x of [-1.55,1.55]){
+  const sofa=new THREE.Mesh(new THREE.BoxGeometry(1.05,.38,2.35),leatherMat); sofa.position.set(x,.40,10.5); clubGroup.add(sofa);
+  const back=new THREE.Mesh(new THREE.BoxGeometry(.18,.72,2.35),leatherMat); back.position.set(x+(x<0?-.45:.45),.72,10.5); clubGroup.add(back);
+  for(const z of [9.65,11.35]){
+    const arm=new THREE.Mesh(new THREE.BoxGeometry(.82,.52,.16),leatherMat); arm.position.set(x,.54,z); clubGroup.add(arm);
+  }
+}
+const socialTable=new THREE.Mesh(new THREE.BoxGeometry(1.45,.08,2.05),marbleMat); socialTable.position.set(0,.43,10.5); clubGroup.add(socialTable);
+const socialBase=new THREE.Mesh(new THREE.BoxGeometry(.58,.38,1.10),woodMat); socialBase.position.set(0,.22,10.5); clubGroup.add(socialBase);
+
+/* Club-style wall molding, acoustic panels and plants improve realism. */
+for(const side of [-1,1]) for(const z of [6.7,9.1,11.9,14.3]){
+  const pilaster=new THREE.Mesh(new THREE.BoxGeometry(.10,2.65,.16),stationFrameMat); pilaster.position.set(side*4.46,1.40,z); clubGroup.add(pilaster);
+}
+for(const z of [7.0,14.0]) for(const side of [-1,1]){
+  const pot=new THREE.Mesh(new THREE.CylinderGeometry(.25,.20,.48,18),marbleMat); pot.position.set(side*3.82,.25,z); clubGroup.add(pot);
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(.035,.045,.65,10),new THREE.MeshStandardMaterial({color:0x49341f,roughness:.9})); stem.position.set(side*3.82,.78,z); clubGroup.add(stem);
+  for(let i=0;i<5;i++){
+    const leaf=new THREE.Mesh(new THREE.SphereGeometry(.20,10,7),new THREE.MeshStandardMaterial({color:0x18382b,roughness:.76}));
+    const a=i*Math.PI*2/5; leaf.scale.set(.7,1.35,.48); leaf.position.set(side*3.82+Math.cos(a)*.17,1.07+(i%2)*.11,z+Math.sin(a)*.17); clubGroup.add(leaf);
+  }
+}
+/* Warm practical lights: emissive fixtures plus only two dynamic sources. */
+for(const z of [7.7,10.5,13.3]){
+  const fixture=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.045,24),stationFrameMat); fixture.position.set(0,3.39,z); clubGroup.add(fixture);
+  const diffuser=new THREE.Mesh(new THREE.CylinderGeometry(.20,.20,.025,24),new THREE.MeshBasicMaterial({color:0xffe0a0})); diffuser.position.set(0,3.35,z); clubGroup.add(diffuser);
+}
+const loungeLightA=new THREE.PointLight(0xffd69a,1.45,5.2); loungeLightA.position.set(0,3.12,8.8); clubGroup.add(loungeLightA);
+const loungeLightB=new THREE.PointLight(0xffd69a,1.45,5.2); loungeLightB.position.set(0,3.12,12.2); clubGroup.add(loungeLightB);
+
+/* Trophy/history gallery: lit display cases on the opposite side. */
+for(const z of [8.0,10.5,13.0]){
+  const plinth=new THREE.Mesh(new THREE.BoxGeometry(1.15,.65,.82),marbleMat);
+  plinth.position.set(2.65,.33,z); clubGroup.add(plinth);
+  const glass=new THREE.Mesh(new THREE.BoxGeometry(1.05,1.20,.72),new THREE.MeshPhysicalMaterial({color:0xddeeff,transparent:true,opacity:.12,roughness:.08,transmission:.65,depthWrite:false}));
+  glass.position.set(2.65,1.22,z); clubGroup.add(glass);
+  const cup=new THREE.Mesh(new THREE.LatheGeometry([new THREE.Vector2(.05,0),new THREE.Vector2(.12,.12),new THREE.Vector2(.18,.28),new THREE.Vector2(.16,.38)],24),brassMat);
+  cup.position.set(2.65,.88,z); clubGroup.add(cup);
+}
+
+/* Spectator lounge near lobby: low-cost furniture, no NPC overhead. */
+for(const x of [-3.05,3.05]){
+  const sofa=new THREE.Mesh(new THREE.BoxGeometry(2.25,.38,.78),leatherMat);
+  sofa.position.set(x,.40,15.55); clubGroup.add(sofa);
+  const sofaBack=new THREE.Mesh(new THREE.BoxGeometry(2.25,.72,.18),leatherMat);
+  sofaBack.position.set(x,.73,15.90); clubGroup.add(sofaBack);
+}
+const loungeTable=new THREE.Mesh(new THREE.BoxGeometry(2.0,.08,.95),marbleMat);
+loungeTable.position.set(0,.43,14.9); clubGroup.add(loungeTable);
+
+/* Quest-friendly lighting: few real lights, emissive fixtures for the rest. */
+for(const z of [7.6,11.2,14.8,17.1]){
+  const fixture=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.035,20),brassMat);
+  fixture.position.set(0,3.40,z); clubGroup.add(fixture);
+}
+for(const z of [9.0,15.5]){
+  const light=new THREE.PointLight(0xffdfa0,1.7,6.0); light.position.set(0,3.12,z); clubGroup.add(light);
+}
+
+
 /* CHAMPIONSHIP BRANDING */
 
 function makeSignTexture(text,subtext){
@@ -1192,7 +1356,8 @@ document.getElementById('savePlayerName').addEventListener('click',()=>{
 document.getElementById('playerNameInput').addEventListener('keydown',(e)=>{
   if(e.key==='Enter') registerBradleyPlayer(e.currentTarget.value);
 });
-if(bcPlayerName) document.getElementById('playerSetup').style.display='none';
+const isLocalPreview=['localhost','127.0.0.1'].includes(location.hostname);
+if(bcPlayerName || isLocalPreview) document.getElementById('playerSetup').style.display='none';
 refreshLeaderboard();
 setInterval(refreshLeaderboard,30000);
 
@@ -3061,6 +3226,39 @@ const moveSpeed=1.65;
 const snapAngle=THREE.MathUtils.degToRad(30);
 const vrClock=new THREE.Clock();
 
+/* DESKTOP WALK MODE: WASD / arrow keys move through the full club; Q/E turn. */
+const desktopKeys=new Set();
+const desktopClock=new THREE.Clock();
+window.addEventListener('keydown',e=>{
+  const tag=(e.target?.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea') return;
+  if(['KeyW','KeyA','KeyS','KeyD','KeyQ','KeyE','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)){
+    desktopKeys.add(e.code); e.preventDefault();
+  }
+});
+window.addEventListener('keyup',e=>desktopKeys.delete(e.code));
+window.addEventListener('blur',()=>desktopKeys.clear());
+
+function updateDesktopLocomotion(){
+  if(renderer.xr.isPresenting){ desktopClock.getDelta(); return; }
+  const dt=Math.min(desktopClock.getDelta(),.05);
+  const forward=new THREE.Vector3(); camera.getWorldDirection(forward); forward.y=0; forward.normalize();
+  const right=new THREE.Vector3(-forward.z,0,forward.x).normalize();
+  let f=0,r=0;
+  if(desktopKeys.has('KeyW')||desktopKeys.has('ArrowUp')) f+=1;
+  if(desktopKeys.has('KeyS')||desktopKeys.has('ArrowDown')) f-=1;
+  if(desktopKeys.has('KeyD')||desktopKeys.has('ArrowRight')) r+=1;
+  if(desktopKeys.has('KeyA')||desktopKeys.has('ArrowLeft')) r-=1;
+  if(f||r){
+    const move=new THREE.Vector3().addScaledVector(forward,f).addScaledVector(right,r).normalize();
+    playerRig.position.addScaledVector(move,3.0*dt);
+    playerRig.position.x=THREE.MathUtils.clamp(playerRig.position.x,-4.25,4.25);
+    playerRig.position.z=THREE.MathUtils.clamp(playerRig.position.z,-.05,17.35);
+  }
+  const turn=(desktopKeys.has('KeyQ')?1:0)-(desktopKeys.has('KeyE')?1:0);
+  if(turn) playerRig.rotation.y+=turn*1.65*dt;
+}
+
 function updateVRLocomotion(){
   if(!renderer.xr.isPresenting) return;
 
@@ -3300,6 +3498,7 @@ renderer.setAnimationLoop(
   ()=>{
 
     updateVRLocomotion();
+    updateDesktopLocomotion();
 
     renderer.render(
       scene,
