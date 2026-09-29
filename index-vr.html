@@ -920,6 +920,14 @@ for(const x of [-2.45,2.45]){
 const portalTop=new THREE.Mesh(new THREE.BoxGeometry(5.06,.16,.20),brassMat);
 portalTop.position.set(0,3.18,5.78); clubGroup.add(portalTop);
 
+/* Close the two exposed seams where the narrower Championship Hall meets the wider lounge. */
+for(const side of [-1,1]){
+  const connectorWall=new THREE.Mesh(new THREE.BoxGeometry(1.72,3.55,.18),clubWallMat);
+  connectorWall.position.set(side*3.56,1.77,5.84); connectorWall.receiveShadow=true; clubGroup.add(connectorWall);
+  const connectorTrim=new THREE.Mesh(new THREE.BoxGeometry(1.72,.08,.05),brassMat);
+  connectorTrim.position.set(side*3.56,3.37,5.73); clubGroup.add(connectorTrim);
+}
+
 /* Lobby and club corridor behind the championship room. */
 const clubFloor=new THREE.Mesh(new THREE.PlaneGeometry(9.4,12.5),clubFloorMat);
 clubFloor.rotation.x=-Math.PI/2; clubFloor.position.set(0,.014,11.75); clubFloor.receiveShadow=true; clubGroup.add(clubFloor);
@@ -959,15 +967,11 @@ pointsCtx.fillStyle='#ffffff'; pointsCtx.font='bold 42px Arial';
 pointsCtx.fillText('WIN  =  2 POINTS',384,174); pointsCtx.fillText('DRAW  =  1 POINT',384,252); pointsCtx.fillText('LOSS  =  0 POINTS',384,330);
 pointsCtx.fillStyle='#d6d6d6'; pointsCtx.font='26px Arial'; pointsCtx.fillText('Points from completed matches count',384,408); pointsCtx.fillText('toward the Bradley Checkers leaderboard.',384,446);
 const pointsPanel=new THREE.Mesh(new THREE.PlaneGeometry(2.45,1.64),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(pointsCanvas),toneMapped:false,side:THREE.DoubleSide}));
-pointsPanel.position.set(4.605,1.72,16.55); pointsPanel.rotation.y=-Math.PI/2; clubGroup.add(pointsPanel);
+pointsPanel.position.set(0,1.28,16.55); pointsPanel.rotation.y=0; clubGroup.add(pointsPanel);
 
-/* Lobby reception desk and logo wall. */
-const reception=new THREE.Mesh(new THREE.BoxGeometry(3.25,.92,.72),woodMat);
-reception.position.set(0,.46,16.55); reception.castShadow=true; clubGroup.add(reception);
-const receptionTop=new THREE.Mesh(new THREE.BoxGeometry(3.45,.08,.86),marbleMat);
-receptionTop.position.set(0,.95,16.55); clubGroup.add(receptionTop);
-const receptionBand=new THREE.Mesh(new THREE.BoxGeometry(2.45,.08,.03),brassMat);
-receptionBand.position.set(0,.58,16.18); clubGroup.add(receptionBand);
+/* Reception desk removed. The leaderboard-points panel now occupies this clear central lounge location. */
+const pointsPedestal=new THREE.Mesh(new THREE.BoxGeometry(2.62,.10,.28),clubWallMat);
+pointsPedestal.position.set(0,.42,16.55); clubGroup.add(pointsPedestal);
 
 /* SIX WALL-MOUNTED CASUAL MATCH STATIONS — 12 simultaneous players. */
 const stationFrameMat=new THREE.MeshStandardMaterial({color:0xb58a2a,metalness:.92,roughness:.20});
