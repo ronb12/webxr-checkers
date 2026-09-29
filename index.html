@@ -996,11 +996,11 @@ pointsCtx.fillStyle='#ffffff'; pointsCtx.font='bold 42px Arial';
 pointsCtx.fillText('WIN  =  2 POINTS',384,174); pointsCtx.fillText('DRAW  =  1 POINT',384,252); pointsCtx.fillText('LOSS  =  0 POINTS',384,330);
 pointsCtx.fillStyle='#d6d6d6'; pointsCtx.font='26px Arial'; pointsCtx.fillText('Points from completed matches count',384,408); pointsCtx.fillText('toward the Bradley Checkers leaderboard.',384,446);
 const pointsPanel=new THREE.Mesh(new THREE.PlaneGeometry(2.45,1.64),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(pointsCanvas),toneMapped:false,side:THREE.DoubleSide}));
-pointsPanel.position.set(0,1.28,16.55); pointsPanel.rotation.y=0; clubGroup.add(pointsPanel);
+pointsPanel.position.set(0,1.08,16.55); pointsPanel.rotation.y=Math.PI; clubGroup.add(pointsPanel);
 
 /* Reception desk removed. The leaderboard-points panel now occupies this clear central lounge location. */
 const pointsPedestal=new THREE.Mesh(new THREE.BoxGeometry(2.62,.10,.28),clubWallMat);
-pointsPedestal.position.set(0,.42,16.55); clubGroup.add(pointsPedestal);
+pointsPedestal.position.set(0,.22,16.55); clubGroup.add(pointsPedestal);
 
 /* SIX WALL-MOUNTED CASUAL MATCH STATIONS — 12 simultaneous players. */
 const stationFrameMat=new THREE.MeshStandardMaterial({color:0xb58a2a,metalness:.92,roughness:.20});
@@ -1022,7 +1022,7 @@ function stationLabel(number){
 
 function addWallStation(side,z,number){
   const x=side*4.53, face=side<0 ? Math.PI/2 : -Math.PI/2;
-  const frame=new THREE.Mesh(new THREE.BoxGeometry(.13,1.72,1.72),stationFrameMat);
+  const frame=new THREE.Mesh(new THREE.BoxGeometry(.13,1.56,1.56),stationFrameMat);
   frame.position.set(x,1.62,z); clubGroup.add(frame);
   const boardBack=new THREE.Mesh(new THREE.BoxGeometry(.145,1.50,1.50),stationDarkMat);
   boardBack.position.set(x-side*.035,1.62,z); clubGroup.add(boardBack);
