@@ -1126,8 +1126,8 @@ const brandSign=new THREE.Mesh(
   })
 );
 /* Bradley Checkers sign now occupies the former creator-plaque position above the board. */
-brandSign.position.set(0,3.30,-.108);
-brandSign.scale.set(.74,.74,.74);
+brandSign.position.set(0,3.42,-.108);
+brandSign.scale.set(.66,.66,.66);
 roomGroup.add(brandSign);
 
 /* Creator / ownership plaque */
@@ -1435,7 +1435,7 @@ const worldScoreboard=new THREE.Mesh(
 /* Put the match scoreboard directly above the wall-mounted checkerboard.
    It is pulled forward from the back wall so it cannot be hidden by wall panels,
    and it faces straight toward the default Quest player position at +Z. */
-worldScoreboard.position.set(0,2.68,.12);
+worldScoreboard.position.set(0,2.88,.12);
 worldScoreboard.rotation.set(0,0,0);
 worldScoreboard.renderOrder=50;
 roomGroup.add(worldScoreboard);
@@ -3336,7 +3336,7 @@ function updateDesktopLocomotion(){
   if(renderer.xr.isPresenting){ desktopClock.getDelta(); return; }
   const dt=Math.min(desktopClock.getDelta(),.05);
   const forward=new THREE.Vector3(); camera.getWorldDirection(forward); forward.y=0; forward.normalize();
-  const right=new THREE.Vector3(-forward.z,0,forward.x).normalize();
+  const right=new THREE.Vector3(forward.z,0,-forward.x).normalize();
   let f=0,r=0;
   if(desktopKeys.has('KeyW')||desktopKeys.has('ArrowUp')) f+=1;
   if(desktopKeys.has('KeyS')||desktopKeys.has('ArrowDown')) f-=1;
@@ -3379,19 +3379,25 @@ function updateVRLocomotion(){
          which makes movement feel reversed/rotated. getWorldQuaternion keeps
          forward = where the player is looking and right = headset right. */
       const xrCamera=renderer.xr.getCamera(camera);
-      const headWorldQ=new THREE.Quaternion();
-      xrCamera.getWorldQuaternion(headWorldQ);
-
-      const forward=new THREE.Vector3(0,0,-1).applyQuaternion(headWorldQ);
+      /* Three.js XR camera already carries the current headset view. Use its
+         world-space look vector directly so stick-up always means where the
+         player's eyes/head are facing, independent of the rig's snap yaw. */
+      const forward=new THREE.Vector3();
+      xrCamera.getWorldDirection(forward);
       forward.y=0;
-      forward.normalize();
+      if(forward.lengthSq()<1e-6) forward.set(0,0,-1);
+      else forward.normalize();
 
-      /* Derive right from forward on the floor plane so left/right cannot flip. */
-      const right=new THREE.Vector3(forward.z,0,-forward.x).normalize();
+      /* In Three.js' Y-up coordinate system, forward x world-up gives camera-right. */
+      const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0)).normalize();
 
-      /* Quest stick: up follows headset forward; right follows headset right. */
-      playerRig.position.addScaledVector(right,x*moveSpeed*dt);
-      playerRig.position.addScaledVector(forward,-y*moveSpeed*dt);
+      const move=new THREE.Vector3()
+        .addScaledVector(forward,-y)
+        .addScaledVector(right,x);
+      if(move.lengthSq()>1) move.normalize();
+      playerRig.position.addScaledVector(move,moveSpeed*dt);
+      playerRig.position.x=THREE.MathUtils.clamp(playerRig.position.x,-4.25,4.25);
+      playerRig.position.z=THREE.MathUtils.clamp(playerRig.position.z,-.05,17.35);
     }
   }
 
