@@ -957,6 +957,35 @@ function clubSign(text,sub,x,y,z,ry=0,w=2.9){
 clubSign('BRADLEY CHECKERS','CLUB & CHAMPIONSHIP VENUE',0,2.45,17.90,Math.PI,4.25);
 
 
+/* Back-wall decorative pedestal stands: black-and-gold vases with gold roses. */
+function addGoldRoseVase(x){
+  const g=new THREE.Group();
+  const standBase=new THREE.Mesh(new THREE.CylinderGeometry(.30,.34,.10,24),stationFrameMat); standBase.position.y=.05; g.add(standBase);
+  const stand=new THREE.Mesh(new THREE.CylinderGeometry(.18,.23,.72,24),new THREE.MeshStandardMaterial({color:0x0b0b0d,metalness:.45,roughness:.28})); stand.position.y=.46; g.add(stand);
+  const standTop=new THREE.Mesh(new THREE.CylinderGeometry(.29,.29,.08,24),stationFrameMat); standTop.position.y=.86; g.add(standTop);
+  const vaseBlack=new THREE.MeshStandardMaterial({color:0x070709,metalness:.48,roughness:.20});
+  const vaseGold=new THREE.MeshStandardMaterial({color:0xd4af37,metalness:.92,roughness:.16});
+  const vase=new THREE.Mesh(new THREE.CylinderGeometry(.18,.27,.54,32),vaseBlack); vase.position.y=1.17; g.add(vase);
+  const vaseRim=new THREE.Mesh(new THREE.TorusGeometry(.185,.025,10,28),vaseGold); vaseRim.rotation.x=Math.PI/2; vaseRim.position.y=1.45; g.add(vaseRim);
+  const vaseBand=new THREE.Mesh(new THREE.TorusGeometry(.235,.022,10,28),vaseGold); vaseBand.rotation.x=Math.PI/2; vaseBand.position.y=1.13; g.add(vaseBand);
+  const stemMat=new THREE.MeshStandardMaterial({color:0x8b6f16,metalness:.55,roughness:.38});
+  for(let i=0;i<7;i++){
+    const a=(i/7)*Math.PI*2, radius=i===0?0:.16;
+    const stem=new THREE.Mesh(new THREE.CylinderGeometry(.009,.012,.48,8),stemMat); stem.position.set(Math.cos(a)*radius*.45,1.67,Math.sin(a)*radius*.45); stem.rotation.z=Math.cos(a)*.10; g.add(stem);
+    const rose=new THREE.Group();
+    for(let p=0;p<6;p++){
+      const petal=new THREE.Mesh(new THREE.SphereGeometry(.075,10,8),vaseGold);
+      const pa=(p/6)*Math.PI*2; petal.scale.set(1,.55,.8); petal.position.set(Math.cos(pa)*.055,0,Math.sin(pa)*.055); rose.add(petal);
+    }
+    const center=new THREE.Mesh(new THREE.SphereGeometry(.055,10,8),vaseGold); center.position.y=.025; rose.add(center);
+    rose.position.set(Math.cos(a)*radius,1.93+(i%2)*.07,Math.sin(a)*radius*.55); g.add(rose);
+  }
+  g.position.set(x,0,17.62); clubGroup.add(g);
+}
+addGoldRoseVase(-3.55);
+addGoldRoseVase(3.55);
+
+
 /* Traditional tournament scoring panel: Win 2, Draw 1, Loss 0. */
 const pointsCanvas=document.createElement('canvas'); pointsCanvas.width=768; pointsCanvas.height=512;
 const pointsCtx=pointsCanvas.getContext('2d');
