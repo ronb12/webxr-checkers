@@ -1435,7 +1435,7 @@ const worldScoreboard=new THREE.Mesh(
 /* Put the match scoreboard directly above the wall-mounted checkerboard.
    It is pulled forward from the back wall so it cannot be hidden by wall panels,
    and it faces straight toward the default Quest player position at +Z. */
-worldScoreboard.position.set(0,2.88,.12);
+worldScoreboard.position.set(0,3.02,.12);
 worldScoreboard.rotation.set(0,0,0);
 worldScoreboard.renderOrder=50;
 roomGroup.add(worldScoreboard);
@@ -3406,7 +3406,7 @@ function updateVRLocomotion(){
     const turnX=axes.length>=4 ? axes[2] : axes[0];
 
     if(Math.abs(turnX)>.72 && snapReady){
-      playerRig.rotation.y+=Math.sign(turnX)*snapAngle;
+      playerRig.rotation.y-=Math.sign(turnX)*snapAngle;
       snapReady=false;
       pulseHaptics();
     }
