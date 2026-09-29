@@ -3355,9 +3355,9 @@ function updateVRLocomotion(){
       forward.normalize();
 
       /* Derive right from forward on the floor plane so left/right cannot flip. */
-      const right=new THREE.Vector3(-forward.z,0,forward.x).normalize();
+      const right=new THREE.Vector3(forward.z,0,-forward.x).normalize();
 
-      /* WebXR thumbstick Y is negative when pushed forward. */
+      /* Quest stick: up follows headset forward; right follows headset right. */
       playerRig.position.addScaledVector(right,x*moveSpeed*dt);
       playerRig.position.addScaledVector(forward,-y*moveSpeed*dt);
     }
@@ -3368,7 +3368,7 @@ function updateVRLocomotion(){
     const turnX=axes.length>=4 ? axes[2] : axes[0];
 
     if(Math.abs(turnX)>.72 && snapReady){
-      playerRig.rotation.y-=Math.sign(turnX)*snapAngle;
+      playerRig.rotation.y+=Math.sign(turnX)*snapAngle;
       snapReady=false;
       pulseHaptics();
     }
