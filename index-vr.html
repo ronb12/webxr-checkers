@@ -1126,8 +1126,8 @@ const brandSign=new THREE.Mesh(
   })
 );
 /* Bradley Checkers sign now occupies the former creator-plaque position above the board. */
-brandSign.position.set(0,3.18,-.108);
-brandSign.scale.set(.88,.88,.88);
+brandSign.position.set(0,3.30,-.108);
+brandSign.scale.set(.74,.74,.74);
 roomGroup.add(brandSign);
 
 /* Creator / ownership plaque */
@@ -1435,7 +1435,7 @@ const worldScoreboard=new THREE.Mesh(
 /* Put the match scoreboard directly above the wall-mounted checkerboard.
    It is pulled forward from the back wall so it cannot be hidden by wall panels,
    and it faces straight toward the default Quest player position at +Z. */
-worldScoreboard.position.set(0,3.02,.12);
+worldScoreboard.position.set(0,2.68,.12);
 worldScoreboard.rotation.set(0,0,0);
 worldScoreboard.renderOrder=50;
 roomGroup.add(worldScoreboard);
