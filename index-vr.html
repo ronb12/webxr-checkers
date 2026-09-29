@@ -940,8 +940,8 @@ lobbyBack.position.set(0,1.77,18.0); clubGroup.add(lobbyBack);
 const clubCeiling=new THREE.Mesh(new THREE.BoxGeometry(9.55,.10,12.5),new THREE.MeshStandardMaterial({color:0x09090b,roughness:.65}));
 clubCeiling.position.set(0,3.52,11.75); clubGroup.add(clubCeiling);
 
-/* Architectural ribs create depth without expensive geometry. */
-for(const z of [7.0,9.4,11.8,14.2,16.6]){
+/* Architectural ribs create depth without crossing any checkerboard bay. */
+for(const z of [6.55,9.975,13.525,17.0]){
   const beam=new THREE.Mesh(new THREE.BoxGeometry(9.1,.08,.10),brassMat);
   beam.position.set(0,3.37,z); clubGroup.add(beam);
   for(const x of [-4.35,4.35]){
