@@ -960,11 +960,11 @@ clubSign('BRADLEY CHECKERS','CLUB & CHAMPIONSHIP VENUE',0,2.45,17.90,Math.PI,4.2
 /* Back-wall decorative pedestal stands: black-and-gold vases with gold roses. */
 function addGoldRoseVase(x){
   const g=new THREE.Group();
-  const standBase=new THREE.Mesh(new THREE.CylinderGeometry(.30,.34,.10,24),stationFrameMat); standBase.position.y=.05; g.add(standBase);
-  const stand=new THREE.Mesh(new THREE.CylinderGeometry(.18,.23,.72,24),new THREE.MeshStandardMaterial({color:0x0b0b0d,metalness:.45,roughness:.28})); stand.position.y=.46; g.add(stand);
-  const standTop=new THREE.Mesh(new THREE.CylinderGeometry(.29,.29,.08,24),stationFrameMat); standTop.position.y=.86; g.add(standTop);
-  const vaseBlack=new THREE.MeshStandardMaterial({color:0x070709,metalness:.48,roughness:.20});
   const vaseGold=new THREE.MeshStandardMaterial({color:0xd4af37,metalness:.92,roughness:.16});
+  const standBase=new THREE.Mesh(new THREE.CylinderGeometry(.30,.34,.10,24),vaseGold); standBase.position.y=.05; g.add(standBase);
+  const stand=new THREE.Mesh(new THREE.CylinderGeometry(.18,.23,.72,24),new THREE.MeshStandardMaterial({color:0x0b0b0d,metalness:.45,roughness:.28})); stand.position.y=.46; g.add(stand);
+  const standTop=new THREE.Mesh(new THREE.CylinderGeometry(.29,.29,.08,24),vaseGold); standTop.position.y=.86; g.add(standTop);
+  const vaseBlack=new THREE.MeshStandardMaterial({color:0x070709,metalness:.48,roughness:.20});
   const vase=new THREE.Mesh(new THREE.CylinderGeometry(.18,.27,.54,32),vaseBlack); vase.position.y=1.17; g.add(vase);
   const vaseRim=new THREE.Mesh(new THREE.TorusGeometry(.185,.025,10,28),vaseGold); vaseRim.rotation.x=Math.PI/2; vaseRim.position.y=1.45; g.add(vaseRim);
   const vaseBand=new THREE.Mesh(new THREE.TorusGeometry(.235,.022,10,28),vaseGold); vaseBand.rotation.x=Math.PI/2; vaseBand.position.y=1.13; g.add(vaseBand);
