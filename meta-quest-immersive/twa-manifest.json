@@ -1,0 +1,55 @@
+{
+  "packageId": "com.bradleyvirtualsolutions.checkers",
+  "applicationId": "1285271641346248",
+  "host": "webxr-checkers.vercel.app",
+  "name": "Bradley Checkers VR",
+  "launcherName": "BradleyCheck",
+  "display": "standalone",
+  "themeColor": "#080808",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#080808",
+  "enableNotifications": true,
+  "enableMicrophone": true,
+  "enableXRScene": false,
+  "startUrl": "/?source=pwa",
+  "iconUrl": "https://webxr-checkers.vercel.app/icons/icon-512.png",
+  "maskableIconUrl": "https://webxr-checkers.vercel.app/icons/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "/Users/ronellbradley/.bradley-checkers-signing/bradley-checkers-upload.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "1.2.0",
+  "appVersionCode": 3,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://webxr-checkers.vercel.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {
+    "horizonPlatformSDK": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": true,
+  "horizonOSAppMode": "immersive",
+  "fullScopeUrl": "https://webxr-checkers.vercel.app/",
+  "minSdkVersion": 23,
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "1.2.0"
+}

@@ -6,3 +6,11 @@ node_modules/
 index-vr-before-*.html
 index-vr-auto-backup-*.html
 *-backup*.html
+
+# Meta immersive PWA local/build state
+meta-quest-immersive/.gradle/
+meta-quest-immersive/app/build/
+meta-quest-immersive/build/
+meta-quest-immersive/local.properties
+meta-quest-immersive/*.jks
+meta-quest-immersive/*.keystore
