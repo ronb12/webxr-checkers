@@ -1061,8 +1061,8 @@ for(const [i,z] of [8.2,11.75,15.3].entries()){
 }
 
 /* Center lounge furniture removed: keep the six-board area completely open for VR circulation. */
-/* Club-style wall molding keeps the lounge refined while the floor stays completely open. */
-for(const side of [-1,1]) for(const z of [6.7,9.1,11.9,14.3]){
+/* Club-style wall molding stays between board bays, never behind a checkerboard frame. */
+for(const side of [-1,1]) for(const z of [6.55,9.975,13.525,17.0]){
   const pilaster=new THREE.Mesh(new THREE.BoxGeometry(.10,2.65,.16),stationFrameMat); pilaster.position.set(side*4.46,1.40,z); clubGroup.add(pilaster);
 }
 /* No indoor plants or freestanding decor beside the six boards: preserve clear VR sightlines and circulation. */
