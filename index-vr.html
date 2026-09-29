@@ -1479,6 +1479,8 @@ let aiThinking=false;
 
 /* SHARED SOCIAL LOUNGE — lightweight avatars, spatial voice, six independent stations. */
 const SOCIAL_HOST_ID='bradley-checkers-social-v1';
+const META_LOUNGE_ID='BRADLEY-LOUNGE';
+const META_LOUNGE_CAPACITY=16;
 let socialPeer=null, socialHost=false, socialHostConn=null, socialConnections=new Map(), socialCallPeers=new Map();
 let socialMic=null, socialMicEnabled=false, activeStation=0;
 const remoteAvatars=new Map();
@@ -1545,7 +1547,7 @@ async function chooseCasualStation(n){
   if(st&&st.players===0)hostOnlineRoom(code,'Board '+n+' • waiting for opponent…');else joinOnlineRoom(code);
   playerRig.position.set(0,0,4.1);onlineStatus('CASUAL BOARD '+n+' • '+code);
 }
-setTimeout(startSocialLounge,700);
+setTimeout(()=>{startSocialLounge();syncMetaPresence(true)},700);
 setInterval(()=>{
   if(!socialPeer)return;const pose=localPose();if(socialHost)socialBroadcast(pose);else if(socialHostConn?.open)socialHostConn.send(pose);
   const listenerPos=new THREE.Vector3();camera.getWorldPosition(listenerPos);for(const [id,v] of socialCallPeers){const a=remoteAvatars.get(id);if(a){const p=new THREE.Vector3();a.getWorldPosition(p);v.pan.positionX.value=p.x;v.pan.positionY.value=p.y;v.pan.positionZ.value=p.z}}
@@ -1554,15 +1556,18 @@ setInterval(()=>{
 /* META QUEST NATIVE SOCIAL BRIDGE
    The native Quest shell injects window.BradleyMetaBridge. WebXR remains fully usable without it. */
 function metaBridge(){ return window.BradleyMetaBridge||null; }
-function roomIsJoinable(){
-  /* A Bradley checkerboard is a strict two-player room: host alone is joinable; an open opponent connection makes it full. */
-  return !!onlineRoomCode && !(onlineConnection && onlineConnection.open);
+function loungePopulation(){
+  if(socialHost) return 1+[...socialConnections.values()].filter(c=>c.open).length;
+  return socialHostConn?.open ? Math.max(2,1+remoteAvatars.size) : 1;
 }
-function syncMetaPresence(joinable=roomIsJoinable()){
+function loungeIsJoinable(){ return loungePopulation()<META_LOUNGE_CAPACITY; }
+function syncMetaPresence(joinable=loungeIsJoinable()){
   const bridge=metaBridge();
-  if(!bridge || !onlineRoomCode) return;
-  const isJoinable=!!joinable && roomIsJoinable();
-  try{ bridge.setPresence?.({destinationApiName:'BRADLEY_CHECKERS_MATCH',lobbySessionId:onlineRoomCode,matchSessionId:onlineRoomCode,isJoinable}); }
+  if(!bridge) return;
+  /* Everyone stays in one Meta lounge. A selected checkerboard is the match session only. */
+  const matchSessionId=activeStation ? 'BCS'+String(activeStation).padStart(3,'0') : '';
+  const isJoinable=!!joinable && loungeIsJoinable();
+  try{ bridge.setPresence?.({destinationApiName:'BRADLEY_CHECKERS_MATCH',lobbySessionId:META_LOUNGE_ID,matchSessionId,isJoinable}); }
   catch(e){ console.warn('Meta presence unavailable',e); }
 }
 function clearMetaPresence(){
@@ -1570,11 +1575,16 @@ function clearMetaPresence(){
 }
 function installMetaJoinHandler(){
   const enterMetaRoom=detail=>{
-    const code=String(detail?.lobbySessionId||detail?.lobby_session_id||detail?.room||'').trim().toUpperCase();
+    const lobby=String(detail?.lobbySessionId||detail?.lobby_session_id||detail?.room||META_LOUNGE_ID).trim().toUpperCase();
+    const match=String(detail?.matchSessionId||detail?.match_session_id||'').trim().toUpperCase();
     const destination=String(detail?.destinationApiName||detail?.destination_api_name||'BRADLEY_CHECKERS_MATCH');
-    if(!code || destination!=='BRADLEY_CHECKERS_MATCH') return;
-    if(onlineRoomCode===code && onlineConnection?.open){ onlineStatus('ROOM '+code+' IS FULL'); syncMetaPresence(false); return; }
-    joinOnlineRoom(code);
+    if(destination!=='BRADLEY_CHECKERS_MATCH' || (lobby && lobby!==META_LOUNGE_ID)) return;
+    syncMetaPresence(true);
+    if(/^BCS00[1-6]$/.test(match)){
+      const n=Number(match.slice(-1)),st=stationStatus[n-1];
+      if(st&&st.players>=2){ onlineStatus('BOARD '+n+' IS IN MATCH • YOU ARE IN THE LOUNGE'); activeStation=0; syncMetaPresence(true); return; }
+      setTimeout(()=>chooseCasualStation(n),250);
+    }else onlineStatus('BRADLEY LOUNGE • '+loungePopulation()+'/'+META_LOUNGE_CAPACITY);
   };
   window.addEventListener('bradley-meta-join',e=>enterMetaRoom(e.detail||{}));
   window.addEventListener('horizon-group-presence-join',e=>enterMetaRoom(e.detail||{}));
@@ -1582,6 +1592,7 @@ function installMetaJoinHandler(){
   const launch={
     room:params.get('room'),
     lobbySessionId:params.get('lobby_session_id')||params.get('lobbySessionId'),
+    matchSessionId:params.get('match_session_id')||params.get('matchSessionId'),
     destinationApiName:params.get('destination')||params.get('destination_api_name')||params.get('destinationApiName')
   };
   if(launch.room||launch.lobbySessionId) setTimeout(()=>enterMetaRoom(launch),350);
@@ -1589,7 +1600,6 @@ function installMetaJoinHandler(){
 async function launchMetaQuickInvite(){
   const bridge=metaBridge();
   if(!bridge){ onlineStatus('META INVITES REQUIRE QUEST APP'); return false; }
-  if(!onlineRoomCode) hostOnlineRoom();
   syncMetaPresence(true);
   try{ await bridge.launchInvitePanel?.(); return true; }
   catch(e){ onlineStatus('META INVITE UNAVAILABLE'); return false; }
@@ -1652,7 +1662,7 @@ function attachOnlineConnection(conn){
     document.getElementById('status').textContent=
       turn===onlineColor ? 'YOUR TURN — '+turn.toUpperCase() : 'OPPONENT TURN — '+turn.toUpperCase();
     if(onlineColor==='red') sendOnlineState();
-    syncMetaPresence(false);
+    syncMetaPresence(true);
   });
   conn.on('data',applyOnlineState);
   conn.on('close',()=>{
@@ -1682,7 +1692,7 @@ function hostOnlineRoom(code,waitingText='Waiting for Black player…'){
     /* Reject a third connection and keep Meta presence non-joinable while this two-player board is occupied. */
     if(onlineConnection && onlineConnection.open){
       try{ conn.on('open',()=>conn.close()); }catch(_e){}
-      syncMetaPresence(false);
+      syncMetaPresence(true);
       return;
     }
     attachOnlineConnection(conn);
